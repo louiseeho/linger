@@ -8,13 +8,102 @@
   const MIN_LOGS = 5;
   const THRESHOLD_PCT = 20;
 
-  /** kg CO₂e order-of-magnitude for new item lifecycle (varies widely by brand/material). */
+  /**
+   * kg CO₂e ballpark for new item (manufacturing + shipping).
+   * co2 = display range; midKg = midpoint for metaphors (not exact science).
+   */
   const ENV_ESTIMATE = {
-    tops: { co2: "7–15" },
-    bottoms: { co2: "20–35" },
-    shoes: { co2: "12–25" },
-    accessories: { co2: "5–14" },
+    tops: { co2: "7–15", midKg: 11 },
+    bottoms: { co2: "20–35", midKg: 28 },
+    shoes: { co2: "12–25", midKg: 19 },
+    accessories: { co2: "5–14", midKg: 10 },
   };
+
+  const METAPHOR_ROTATE_KEY = "linger_carbon_metaphor_idx";
+
+  function nextMetaphorIndex(len) {
+    let v = parseInt(sessionStorage.getItem(METAPHOR_ROTATE_KEY) || "0", 10);
+    if (!Number.isFinite(v)) v = 0;
+    const idx = ((v % len) + len) % len;
+    sessionStorage.setItem(METAPHOR_ROTATE_KEY, String(v + 1));
+    return idx;
+  }
+
+  function buildMetaphorTrees(midKg) {
+    const n = Math.max(1, Math.round(midKg / 22));
+    const p = document.createElement("p");
+    p.className = "linger-shop-impact-metaphor";
+    p.appendChild(document.createTextNode("You\u2019d need to plant about "));
+    const s = document.createElement("strong");
+    s.textContent = String(n);
+    p.appendChild(s);
+    p.appendChild(
+      document.createTextNode(
+        n === 1
+          ? " tree and let it grow about a year to soak up that much CO\u2082."
+          : " trees and let them grow about a year to soak up that much CO\u2082."
+      )
+    );
+    return p;
+  }
+
+  function buildMetaphorDriving(midKg) {
+    const km = Math.max(1, Math.round(midKg / 0.13));
+    const mi = Math.max(1, Math.round(km * 0.621));
+    const p = document.createElement("p");
+    p.className = "linger-shop-impact-metaphor";
+    p.appendChild(document.createTextNode("That\u2019s about the same as driving "));
+    const s = document.createElement("strong");
+    s.textContent = mi + " mi";
+    p.appendChild(s);
+    p.appendChild(document.createTextNode(" ("));
+    const s2 = document.createElement("strong");
+    s2.textContent = km + " km";
+    p.appendChild(s2);
+    p.appendChild(
+      document.createTextNode(") in an average passenger car.")
+    );
+    return p;
+  }
+
+  function buildMetaphorKettle(midKg) {
+    const boils = Math.max(1, Math.round(midKg / 0.048));
+    const p = document.createElement("p");
+    p.className = "linger-shop-impact-metaphor";
+    p.appendChild(document.createTextNode("About as much grid electricity as boiling a full kettle "));
+    const s = document.createElement("strong");
+    s.textContent = String(boils);
+    p.appendChild(s);
+    p.appendChild(
+      document.createTextNode(
+        boils === 1 ? " time from cold." : " times from cold."
+      )
+    );
+    return p;
+  }
+
+  function buildMetaphorBulb(midKg) {
+    const kwh = midKg / 0.38;
+    const hours10w = kwh / 0.01;
+    const days = Math.max(1, Math.round(hours10w / 24));
+    const p = document.createElement("p");
+    p.className = "linger-shop-impact-metaphor";
+    p.appendChild(document.createTextNode("Like leaving a 10W LED bulb on "));
+    const s = document.createElement("strong");
+    s.textContent = "about " + days + " day" + (days === 1 ? "" : "s");
+    p.appendChild(s);
+    p.appendChild(
+      document.createTextNode(" straight on a typical grid.")
+    );
+    return p;
+  }
+
+  const CARBON_METAPHORS = [
+    buildMetaphorTrees,
+    buildMetaphorDriving,
+    buildMetaphorKettle,
+    buildMetaphorBulb,
+  ];
 
   /** Typical new fast-fashion price midpoints (USD) when page price missing. */
   const FALLBACK_RETAIL_USD = {
@@ -290,66 +379,93 @@
     }
   }
 
-  function buildEnvironmentalCopy(productRegion) {
+  function appendEnvironmentalImpact(container, productRegion) {
     const e = ENV_ESTIMATE[productRegion] || ENV_ESTIMATE.tops;
-    return (
-      "Rough footprint ballpark: manufacturing & shipping a **new** item like this is often on the order of **" +
+    const midKg = e.midKg != null ? e.midKg : 11;
+    const midRounded = Math.round(midKg);
+
+    const title = document.createElement("div");
+    title.className = "linger-shop-impact-title";
+    title.textContent = "Carbon footprint (ballpark)";
+
+    const numWrap = document.createElement("div");
+    numWrap.className = "linger-shop-impact-number";
+    numWrap.appendChild(document.createTextNode("~"));
+    const numStrong = document.createElement("strong");
+    numStrong.textContent = String(midRounded);
+    numWrap.appendChild(numStrong);
+    numWrap.appendChild(document.createTextNode(" kg CO\u2082e"));
+
+    const range = document.createElement("div");
+    range.className = "linger-shop-impact-range";
+    range.textContent =
+      "Typical range for one new item like this: " +
       e.co2 +
-      " kg CO₂e** (varies by fabric, brand, and country). Buying **secondhand** skips most of that production — a real emissions cut, even if we can’t know the exact grams."
-    );
+      " kg (making + shipping). Buying secondhand avoids most of that.";
+
+    const idx = nextMetaphorIndex(CARBON_METAPHORS.length);
+    const metaphorEl = CARBON_METAPHORS[idx](midKg);
+
+    container.appendChild(title);
+    container.appendChild(numWrap);
+    container.appendChild(range);
+    container.appendChild(metaphorEl);
   }
 
-  function buildThriftSavingsCopy(productRegion) {
+  function appendThriftSavings(container, productRegion) {
     const { price, currency } = extractRetailPriceAndCurrency();
-    const ref =
-      price != null && price > 0
-        ? price
-        : FALLBACK_RETAIL_USD[productRegion] || 45;
+    const hasPrice = price != null && price > 0;
+    const ref = hasPrice ? price : FALLBACK_RETAIL_USD[productRegion] || 45;
     const usedLow = Math.round(ref * 0.26);
     const usedHigh = Math.round(ref * 0.48);
     const saveIfLow = Math.max(0, Math.round(ref - usedHigh));
     const saveIfHigh = Math.max(0, Math.round(ref - usedLow));
     const fmt = (n) => formatMoney(n, currency);
 
-    if (price != null && price > 0) {
-      return {
-        title: "Thrift / resale vs this listing",
-        p1:
-          "Similar pieces often show up at charity shops or thrift stores for about **" +
-          fmt(usedLow) +
-          "–" +
-          fmt(usedHigh) +
-          "** (very rough — depends on brand, city, and luck).",
-        p2:
-          "If you found one like that instead of paying **" +
-          fmt(ref) +
-          "** here, you could keep roughly **" +
-          fmt(saveIfLow) +
-          "–" +
-          fmt(saveIfHigh) +
-          "** in your pocket.",
-      };
+    const title = document.createElement("div");
+    title.className = "linger-shop-savings-title";
+    title.textContent = hasPrice
+      ? "Thrift / resale vs this listing"
+      : "Typical secondhand range";
+    container.appendChild(title);
+
+    if (hasPrice) {
+      const listingRow = document.createElement("div");
+      listingRow.className = "linger-shop-savings-listing";
+      listingRow.appendChild(document.createTextNode("This listing: "));
+      const listStrong = document.createElement("strong");
+      listStrong.textContent = fmt(ref);
+      listingRow.appendChild(listStrong);
+      container.appendChild(listingRow);
     }
-    const cat = REGION_LABEL[productRegion] || "item";
-    return {
-      title: "Typical secondhand range",
-      p1:
-        "We couldn’t read this page’s price, but **" +
-        cat +
-        "** like this often resell secondhand around **" +
-        fmt(usedLow) +
-        "–" +
-        fmt(usedHigh) +
-        "** in many cities (USD-style ballpark).",
-      p2:
-        "Compared to buying **new** at a typical fast-fashion price (~" +
-        fmt(ref) +
-        "), that’s often **" +
-        fmt(saveIfLow) +
-        "–" +
-        fmt(saveIfHigh) +
-        "** less if the thrift gods smile.",
-    };
+
+    const bandLab = document.createElement("div");
+    bandLab.className = "linger-shop-savings-muted";
+    bandLab.textContent = hasPrice
+      ? "Similar pieces often show up for about:"
+      : "We couldn\u2019t read this page\u2019s price. Ballpark secondhand band:";
+
+    const bandNum = document.createElement("div");
+    bandNum.className = "linger-shop-savings-highlight";
+    bandNum.textContent = fmt(usedLow) + " \u2013 " + fmt(usedHigh);
+
+    const saveLab = document.createElement("div");
+    saveLab.className = "linger-shop-savings-muted";
+    saveLab.style.marginTop = "10px";
+    saveLab.textContent = hasPrice
+      ? "You could keep about:"
+      : "Versus typical new for this type (~" + fmt(ref) + "), you might save about:";
+
+    const saveNum = document.createElement("div");
+    saveNum.className = "linger-shop-savings-savehero";
+    const saveStrong = document.createElement("strong");
+    saveStrong.textContent = fmt(saveIfLow) + " \u2013 " + fmt(saveIfHigh);
+    saveNum.appendChild(saveStrong);
+
+    container.appendChild(bandLab);
+    container.appendChild(bandNum);
+    container.appendChild(saveLab);
+    container.appendChild(saveNum);
   }
 
   function productSearchQuery() {
@@ -388,29 +504,6 @@
     sessionStorage.setItem(SESSION_DISMISSED, "1");
     if (logEvent) logInterventionDismissed(region || "unknown");
     if (root && root.parentNode) root.parentNode.removeChild(root);
-  }
-
-  function appendFormattedLine(container, text) {
-    const re = /\*\*([^*]+)\*\*/g;
-    let last = 0;
-    let matched = false;
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      matched = true;
-      if (m.index > last) {
-        container.appendChild(document.createTextNode(text.slice(last, m.index)));
-      }
-      const s = document.createElement("strong");
-      s.textContent = m[1];
-      container.appendChild(s);
-      last = m.lastIndex;
-    }
-    if (matched && last < text.length) {
-      container.appendChild(document.createTextNode(text.slice(last)));
-    }
-    if (!matched) {
-      container.appendChild(document.createTextNode(text));
-    }
   }
 
   function renderBarChart(container, percentages) {
@@ -472,23 +565,11 @@
 
     const impact = document.createElement("div");
     impact.className = "linger-shop-impact";
-    appendFormattedLine(impact, buildEnvironmentalCopy(productRegion));
+    appendEnvironmentalImpact(impact, productRegion);
 
     const thrift = document.createElement("div");
     thrift.className = "linger-shop-savings";
-    const thriftCopy = buildThriftSavingsCopy(productRegion);
-    const thriftTitle = document.createElement("div");
-    thriftTitle.className = "linger-shop-savings-title";
-    thriftTitle.textContent = thriftCopy.title;
-    thrift.appendChild(thriftTitle);
-    const p1 = document.createElement("p");
-    p1.style.margin = "0 0 6px";
-    appendFormattedLine(p1, thriftCopy.p1);
-    thrift.appendChild(p1);
-    const p2 = document.createElement("p");
-    p2.style.margin = "0";
-    appendFormattedLine(p2, thriftCopy.p2);
-    thrift.appendChild(p2);
+    appendThriftSavings(thrift, productRegion);
 
     const footnote = document.createElement("p");
     footnote.className = "linger-shop-footnote";

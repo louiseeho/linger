@@ -87,9 +87,6 @@
 }
 
 .linger-shop-impact {
-  font-size: 0.76rem;
-  line-height: 1.45;
-  color: #2c2c2a;
   margin: 0 0 10px;
   padding: 10px;
   background: rgba(44, 44, 42, 0.04);
@@ -97,8 +94,52 @@
   border: 1px solid #e8e4de;
 }
 
+.linger-shop-impact-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5a5a58;
+  margin: 0 0 8px;
+}
+
+.linger-shop-impact-number {
+  font-size: 1.28rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #2c2c2a;
+  line-height: 1.15;
+  margin: 0 0 6px;
+}
+
+.linger-shop-impact-number strong {
+  font-size: 1.12em;
+  font-weight: 700;
+  color: #2c2c2a;
+}
+
+.linger-shop-impact-range {
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: #6b6b66;
+  margin: 0 0 10px;
+}
+
+.linger-shop-impact-metaphor {
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #3d3d3a;
+  margin: 0;
+}
+
+.linger-shop-impact-metaphor strong {
+  color: #2c2c2a;
+  font-weight: 600;
+}
+
 .linger-shop-impact strong {
   color: #2c2c2a;
+  font-weight: 600;
 }
 
 .linger-shop-savings {
@@ -119,6 +160,48 @@
   letter-spacing: 0.04em;
   color: #5a6b5c;
   margin: 0 0 6px;
+}
+
+.linger-shop-savings-listing {
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #3d3d3a;
+  margin: 0 0 10px;
+}
+
+.linger-shop-savings-listing strong {
+  font-weight: 700;
+  color: #2c2c2a;
+}
+
+.linger-shop-savings-muted {
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #6b6b66;
+  margin: 0 0 4px;
+}
+
+.linger-shop-savings-highlight {
+  font-size: 1.06rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #2c2c2a;
+  line-height: 1.2;
+  margin: 0 0 4px;
+}
+
+.linger-shop-savings-savehero {
+  font-size: 1.24rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #2c2c2a;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.linger-shop-savings-savehero strong {
+  font-weight: 800;
+  color: #2c2c2a;
 }
 
 .linger-shop-footnote {
