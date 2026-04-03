@@ -1,0 +1,215 @@
+/* Linger overlay — prefixed to avoid clashing with Pinterest */
+
+.linger-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  pointer-events: none;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 20px;
+  box-sizing: border-box;
+}
+
+.linger-root * {
+  box-sizing: border-box;
+}
+
+.linger-card {
+  pointer-events: auto;
+  width: min(420px, calc(100vw - 40px));
+  max-height: min(85vh, 520px);
+  overflow-y: auto;
+  background: #fffef9;
+  color: #2c2c2a;
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(44, 44, 42, 0.12), 0 2px 8px rgba(44, 44, 42, 0.06);
+  padding: 22px 22px 20px;
+  animation: linger-enter 0.38s ease-out;
+}
+
+@keyframes linger-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.linger-card.linger-card--success {
+  text-align: center;
+  padding: 28px 20px;
+}
+
+.linger-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.linger-logo {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #2c2c2a;
+}
+
+.linger-logo-dot {
+  color: #e24b4a;
+}
+
+.linger-sub {
+  font-size: 0.8rem;
+  color: #6b6b66;
+  margin-top: 2px;
+}
+
+.linger-step {
+  margin-bottom: 14px;
+}
+
+.linger-step-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b6b66;
+  margin-bottom: 8px;
+}
+
+.linger-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.linger-pill {
+  appearance: none;
+  border: 1px solid #d8d4cc;
+  background: transparent;
+  color: #2c2c2a;
+  font-size: 0.8125rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+}
+
+.linger-pill:hover {
+  border-color: #8a9e8c;
+  background: rgba(138, 158, 140, 0.08);
+}
+
+.linger-pill.linger-pill--selected {
+  background: #8a9e8c;
+  border-color: #8a9e8c;
+  color: #faf8f5;
+}
+
+.linger-pill:focus-visible {
+  outline: 2px solid #8a9e8c;
+  outline-offset: 2px;
+}
+
+.linger-note {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid #d8d4cc;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #2c2c2a;
+  background: #fff;
+  resize: vertical;
+  min-height: 44px;
+}
+
+.linger-note:focus {
+  outline: none;
+  border-color: #8a9e8c;
+  box-shadow: 0 0 0 3px rgba(138, 158, 140, 0.2);
+}
+
+.linger-note-hint {
+  font-size: 0.7rem;
+  color: #8a8880;
+  margin-top: 6px;
+}
+
+.linger-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 4px;
+}
+
+.linger-btn-log {
+  flex: 1;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #2c2c2a;
+  color: #faf8f5;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.linger-btn-log:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.linger-btn-log:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.linger-btn-log:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.linger-skip {
+  font-size: 0.8rem;
+  color: #6b6b66;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-family: inherit;
+  padding: 8px 4px;
+}
+
+.linger-skip:hover {
+  color: #2c2c2a;
+}
+
+.linger-success-text {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.25rem;
+  color: #2c2c2a;
+}
+
+.linger-fade-out {
+  animation: linger-fade-out 0.45s ease forwards;
+}
+
+@keyframes linger-fade-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98) translateY(6px);
+  }
+}

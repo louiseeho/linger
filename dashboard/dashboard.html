@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Linger</title>
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
+    <div class="dash">
+      <header class="dash-header">
+        <h1 class="dash-title">
+          Linger<span class="dash-title-dot">.</span>
+        </h1>
+        <p class="dash-tagline">Your Pinterest taste profile</p>
+      </header>
+
+      <section class="dash-section" aria-labelledby="taste-heading">
+        <h2 id="taste-heading" class="dash-section-title">Taste profile</h2>
+        <p id="dash-summary" class="dash-summary"></p>
+        <div class="dash-stat">
+          <span class="dash-stat-label">Total saves logged</span>
+          <span id="dash-total" class="dash-stat-value">0</span>
+        </div>
+        <h3 class="dash-chart-title">Where your eye goes</h3>
+        <div id="dash-regions-chart" class="dash-chart"></div>
+        <h3 class="dash-chart-title">What you notice</h3>
+        <div id="dash-tags-chart" class="dash-chart"></div>
+      </section>
+
+      <section class="dash-section" aria-labelledby="recent-heading">
+        <h2 id="recent-heading" class="dash-section-title">Recent logs</h2>
+        <div id="dash-recent" class="dash-recent"></div>
+        <p id="dash-recent-empty" class="dash-empty hidden">
+          No entries yet. Save a pin on Pinterest and log what you love.
+        </p>
+      </section>
+
+      <footer class="dash-footer">
+        <button type="button" id="dash-clear" class="dash-clear">
+          Clear all data
+        </button>
+        <div id="dash-clear-confirm" class="dash-clear-confirm hidden">
+          <p>Delete every Linger log? This cannot be undone.</p>
+          <div class="dash-clear-actions">
+            <button type="button" id="dash-clear-cancel" class="dash-btn-secondary">
+              Cancel
+            </button>
+            <button type="button" id="dash-clear-yes" class="dash-btn-danger">
+              Delete all
+            </button>
+          </div>
+        </div>
+      </footer>
+    </div>
+    <script src="dashboard.js"></script>
+  </body>
+</html>

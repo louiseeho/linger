@@ -1,0 +1,262 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  max-width: 380px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  color: #2c2c2a;
+  background: #faf8f5;
+}
+
+.dash {
+  padding: 18px 16px 20px;
+}
+
+.dash-header {
+  margin-bottom: 20px;
+}
+
+.dash-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.dash-title-dot {
+  color: #e24b4a;
+}
+
+.dash-tagline {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #6b6b66;
+}
+
+.dash-section {
+  margin-bottom: 22px;
+}
+
+.dash-section-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.dash-summary {
+  margin: 0 0 14px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #3d3d3a;
+}
+
+.dash-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 10px 12px;
+  background: #fffef9;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(44, 44, 42, 0.06);
+}
+
+.dash-stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b6b66;
+}
+
+.dash-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2c2c2a;
+}
+
+.dash-chart-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b6b66;
+  margin: 0 0 8px;
+}
+
+.dash-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.dash-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(64px, 1fr) 32px;
+  gap: 8px;
+  align-items: center;
+}
+
+.dash-bar-label {
+  font-size: 0.8rem;
+  color: #2c2c2a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-bar-track {
+  height: 10px;
+  background: #e8e4dc;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.dash-bar-fill {
+  height: 100%;
+  background: #8a9e8c;
+  border-radius: 999px;
+  min-width: 4px;
+  transition: width 0.35s ease;
+}
+
+.dash-bar-count {
+  font-size: 0.75rem;
+  color: #6b6b66;
+  text-align: right;
+}
+
+.dash-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dash-card {
+  background: #fffef9;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(44, 44, 42, 0.07);
+}
+
+.dash-card-time {
+  font-size: 0.7rem;
+  color: #8a8880;
+  margin-bottom: 8px;
+}
+
+.dash-card-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.dash-pill {
+  font-size: 0.68rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(138, 158, 140, 0.2);
+  color: #2c2c2a;
+}
+
+.dash-pill--tag {
+  background: rgba(44, 44, 42, 0.08);
+}
+
+.dash-card-note {
+  font-size: 0.8rem;
+  color: #3d3d3a;
+  line-height: 1.4;
+  margin: 0;
+  font-style: italic;
+}
+
+.dash-empty {
+  font-size: 0.85rem;
+  color: #6b6b66;
+  margin: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.dash-footer {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e8e4dc;
+}
+
+.dash-clear {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  color: #6b6b66;
+  background: transparent;
+  border: 1px solid #d8d4cc;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dash-clear:hover {
+  border-color: #8a9e8c;
+  color: #2c2c2a;
+}
+
+.dash-clear-confirm {
+  margin-top: 10px;
+}
+
+.dash-clear-confirm p {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: #3d3d3a;
+}
+
+.dash-clear-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.dash-btn-secondary,
+.dash-btn-danger {
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+}
+
+.dash-btn-secondary {
+  background: #e8e4dc;
+  color: #2c2c2a;
+}
+
+.dash-btn-danger {
+  background: #c94a48;
+  color: #faf8f5;
+}
+
+.dash-btn-secondary:hover {
+  background: #ddd8ce;
+}
+
+.dash-btn-danger:hover {
+  background: #b03e3c;
+}
+
+.dash-chart-empty {
+  font-size: 0.8rem;
+  color: #8a8880;
+  margin: 0;
+}
