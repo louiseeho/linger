@@ -1,0 +1,246 @@
+/* Linger shopping intervention — isolated class prefix */
+
+.linger-shop-root {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 288px;
+  z-index: 999999;
+  pointer-events: none;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+.linger-shop-root * {
+  box-sizing: border-box;
+}
+
+.linger-shop-card {
+  pointer-events: auto;
+  margin-right: 12px;
+  margin-left: 8px;
+  padding: 14px 14px 16px;
+  background: #faf8f5;
+  color: #2c2c2a;
+  border: 1px solid #e8e4de;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  transform: translateX(100%);
+  opacity: 0;
+  transition:
+    transform 300ms ease-out,
+    opacity 300ms ease-out;
+}
+
+.linger-shop-card.linger-shop-card--in {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.linger-shop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.linger-shop-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.linger-shop-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e24b4a;
+  flex-shrink: 0;
+}
+
+.linger-shop-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2c2c2a;
+  letter-spacing: 0.02em;
+}
+
+.linger-shop-dismiss {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #6b6b66;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.linger-shop-dismiss:hover {
+  color: #2c2c2a;
+  background: rgba(44, 44, 42, 0.06);
+}
+
+.linger-shop-impact {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: #2c2c2a;
+  margin: 0 0 10px;
+  padding: 10px;
+  background: rgba(44, 44, 42, 0.04);
+  border-radius: 8px;
+  border: 1px solid #e8e4de;
+}
+
+.linger-shop-impact strong {
+  color: #2c2c2a;
+}
+
+.linger-shop-savings {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: #2c2c2a;
+  margin: 0 0 12px;
+  padding: 10px;
+  background: rgba(138, 158, 140, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(138, 158, 140, 0.3);
+}
+
+.linger-shop-savings-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5a6b5c;
+  margin: 0 0 6px;
+}
+
+.linger-shop-footnote {
+  font-size: 0.65rem;
+  line-height: 1.4;
+  color: #8a8880;
+  margin: 0 0 12px;
+  font-style: italic;
+}
+
+.linger-shop-divider {
+  height: 1px;
+  background: #e8e4de;
+  margin: 0 0 12px;
+}
+
+.linger-shop-insight {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #2c2c2a;
+  margin: 0 0 10px;
+}
+
+.linger-shop-nudge {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #5a5a56;
+  margin: 0 0 12px;
+  padding: 10px;
+  background: rgba(138, 158, 140, 0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(138, 158, 140, 0.25);
+}
+
+.linger-shop-chart-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b6b66;
+  margin: 0 0 6px;
+}
+
+.linger-shop-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.linger-shop-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 52px) 1fr 26px;
+  gap: 6px;
+  align-items: center;
+}
+
+.linger-shop-bar-label {
+  font-size: 0.68rem;
+  color: #2c2c2a;
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.linger-shop-bar-track {
+  height: 8px;
+  background: #e8e4dc;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.linger-shop-bar-fill {
+  height: 100%;
+  background: #8a9e8c;
+  border-radius: 999px;
+  min-width: 2px;
+  transition: width 0.35s ease;
+}
+
+.linger-shop-bar-pct {
+  font-size: 0.65rem;
+  color: #6b6b66;
+  text-align: right;
+}
+
+.linger-shop-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linger-shop-btn {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  border: none;
+  transition: opacity 0.15s ease;
+}
+
+.linger-shop-btn:hover {
+  opacity: 0.92;
+}
+
+.linger-shop-btn--primary {
+  background: #2c2c2a;
+  color: #faf8f5;
+}
+
+.linger-shop-btn--secondary {
+  background: transparent;
+  color: #8a9e8c;
+  border: 1px solid #8a9e8c;
+}
+
+.linger-shop-btn--secondary:hover {
+  background: rgba(138, 158, 140, 0.1);
+}

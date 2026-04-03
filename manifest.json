@@ -18,7 +18,16 @@
     "*://*.pinterest.mx/*",
     "*://*.pinterest.com.au/*",
     "*://*.pinterest.ca/*",
-    "https://i.pinimg.com/*"
+    "https://i.pinimg.com/*",
+    "*://*.zara.com/*",
+    "*://*.hm.com/*",
+    "*://*.asos.com/*",
+    "*://*.uniqlo.com/*",
+    "*://*.mango.com/*",
+    "*://*.urbanoutfitters.com/*",
+    "*://*.nordstrom.com/*",
+    "*://*.net-a-porter.com/*",
+    "*://*.shopify.com/*"
   ],
   "action": {
     "default_popup": "dashboard/dashboard.html",
@@ -53,6 +62,22 @@
       ],
       "js": ["content/pinterest.js"],
       "css": ["content/overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "*://*.zara.com/*",
+        "*://*.hm.com/*",
+        "*://*.asos.com/*",
+        "*://*.uniqlo.com/*",
+        "*://*.mango.com/*",
+        "*://*.urbanoutfitters.com/*",
+        "*://*.nordstrom.com/*",
+        "*://*.net-a-porter.com/*",
+        "*://*.shopify.com/*"
+      ],
+      "js": ["content/shopping.js"],
+      "css": ["content/shopping.css"],
       "run_at": "document_idle"
     }
   ]
