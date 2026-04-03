@@ -17,7 +17,8 @@
     "*://*.pinterest.se/*",
     "*://*.pinterest.mx/*",
     "*://*.pinterest.com.au/*",
-    "*://*.pinterest.ca/*"
+    "*://*.pinterest.ca/*",
+    "https://i.pinimg.com/*"
   ],
   "action": {
     "default_popup": "dashboard/dashboard.html",

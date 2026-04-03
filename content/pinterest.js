@@ -25,11 +25,14 @@
     "A specific item",
   ];
 
+  const STORAGE_BUDGET_BYTES = 8 * 1024 * 1024;
+
   let debounceTimer = null;
   let overlayEl = null;
   let saveIntentAt = 0;
   let pollTimer = null;
   let pollTicks = 0;
+  let lastPinPreviewUrl = null;
 
   function getSkipStreak() {
     const n = parseInt(sessionStorage.getItem(SKIP_KEY) || "0", 10);
@@ -44,10 +47,192 @@
     return Date.now() - saveIntentAt < SAVE_INTENT_MS;
   }
 
-  function markSaveIntent() {
+  function markSaveIntent(ev) {
     saveIntentAt = Date.now();
+    if (ev && eventPathIncludesSaveTarget(ev)) {
+      const saveEl = getSaveLikeElementFromPath(ev);
+      lastPinPreviewUrl =
+        findPinImageUrlNearSaveButton(saveEl) || findFallbackPinImageUrl();
+    }
     startSavePoll();
     scheduleShowOverlay();
+  }
+
+  function getSaveLikeElementFromPath(ev) {
+    const path =
+      typeof ev.composedPath === "function" ? ev.composedPath() : [];
+    for (const n of path) {
+      if (isSaveLikeElement(n)) return n;
+    }
+    let t = ev.target;
+    if (t && t.nodeType === Node.TEXT_NODE) t = t.parentElement;
+    while (t && t !== document && t !== window) {
+      if (isSaveLikeElement(t)) return t;
+      t = t.parentElement;
+    }
+    return null;
+  }
+
+  function isPinImageCandidate(img) {
+    if (!(img instanceof HTMLImageElement) || !img.src) return false;
+    const s = img.src.toLowerCase();
+    if (
+      !s.includes("pinimg") &&
+      !s.includes("pinimg.com") &&
+      !s.includes("media.pinterest.com")
+    ) {
+      return false;
+    }
+    if (s.includes("avatar") || s.includes("profile")) return false;
+    const w = img.naturalWidth || img.width || 0;
+    const h = img.naturalHeight || img.height || 0;
+    return w * h > 2000;
+  }
+
+  function pickLargestPinImageUrl(root) {
+    if (!(root instanceof Element)) return null;
+    let bestUrl = null;
+    let bestArea = 0;
+    for (const img of root.querySelectorAll("img")) {
+      if (!isPinImageCandidate(img)) continue;
+      const w = img.naturalWidth || img.width || 1;
+      const h = img.naturalHeight || img.height || 1;
+      const a = w * h;
+      if (a > bestArea) {
+        bestArea = a;
+        bestUrl = img.currentSrc || img.src;
+      }
+    }
+    return bestUrl;
+  }
+
+  function findPinRootFromElement(el) {
+    if (!(el instanceof Element)) return null;
+    return (
+      el.closest('[data-test-id="pin"]') ||
+      el.closest('[data-test-id="pinWrapper"]') ||
+      el.closest('[data-test-id*="PinCard"]') ||
+      el.closest('[data-test-id*="pinCard"]') ||
+      el.closest("article") ||
+      el.closest('div[role="listitem"]')
+    );
+  }
+
+  function findPinImageUrlNearSaveButton(saveBtn) {
+    if (!(saveBtn instanceof Element)) return null;
+    const root = findPinRootFromElement(saveBtn);
+    if (root) {
+      const u = pickLargestPinImageUrl(root);
+      if (u) return u;
+    }
+    let p = saveBtn;
+    for (let d = 0; d < 12 && p; d++) {
+      const u = pickLargestPinImageUrl(p);
+      if (u) return u;
+      p = p.parentElement;
+    }
+    return null;
+  }
+
+  function findFallbackPinImageUrl() {
+    const dialogs = document.querySelectorAll(
+      '[role="dialog"], [role="alertdialog"]'
+    );
+    for (const d of dialogs) {
+      if (!isVisible(d)) continue;
+      const u = pickLargestPinImageUrl(d);
+      if (u) return u;
+    }
+    if (!/\/pin\//.test(window.location.pathname)) return null;
+    const scope =
+      document.querySelector('[data-test-id="pinrep"]') ||
+      document.querySelector("main") ||
+      document.body;
+    return pickLargestPinImageUrl(scope);
+  }
+
+  function resolveOverlayPreviewUrl() {
+    if (saveIntentRecent() && lastPinPreviewUrl) return lastPinPreviewUrl;
+    const fb = findFallbackPinImageUrl();
+    return fb || lastPinPreviewUrl || null;
+  }
+
+  function pruneThumbnailsIfOverBudget(logs) {
+    if (JSON.stringify(logs).length <= STORAGE_BUDGET_BYTES) return false;
+    const order = logs
+      .map((e, i) => ({ i, t: new Date(e.timestamp).getTime() }))
+      .sort((a, b) => a.t - b.t);
+    let cleared = 0;
+    for (const { i } of order) {
+      if (cleared >= 10) break;
+      if (logs[i].thumbnail) {
+        logs[i].thumbnail = null;
+        cleared++;
+      }
+    }
+    if (cleared > 0) {
+      console.warn(
+        "Linger: linger_logs exceeded 8MB; removed thumbnails from up to 10 oldest entries."
+      );
+    }
+    return cleared > 0;
+  }
+
+  async function captureImageAsBase64(imageUrl) {
+    if (!imageUrl) return null;
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const MAX = 200;
+            const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+            canvas.width = Math.max(1, Math.round(img.width * scale));
+            canvas.height = Math.max(1, Math.round(img.height * scale));
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve(null);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", 0.7));
+          } catch (_) {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = imageUrl;
+      } catch (_) {
+        resolve(null);
+      }
+    });
+  }
+
+  async function appendLog(entry) {
+    const data = await chrome.storage.local.get(STORAGE_KEY);
+    const logs = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
+    pruneThumbnailsIfOverBudget(logs);
+    entry.thumbnail = null;
+    logs.push(entry);
+    await chrome.storage.local.set({ [STORAGE_KEY]: logs });
+  }
+
+  async function patchLogThumbnail(id, dataUrl) {
+    if (!dataUrl) return;
+    const data = await chrome.storage.local.get(STORAGE_KEY);
+    const logs = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
+    const row = logs.find((x) => x.id === id);
+    if (!row) return;
+    row.thumbnail = dataUrl;
+    pruneThumbnailsIfOverBudget(logs);
+    try {
+      await chrome.storage.local.set({ [STORAGE_KEY]: logs });
+    } catch (e) {
+      row.thumbnail = null;
+      console.error("Linger: failed to store thumbnail", e);
+    }
   }
 
   function startSavePoll() {
@@ -281,16 +466,10 @@
 
   function bindSaveIntentListeners() {
     const onIntent = (ev) => {
-      if (eventPathIncludesSaveTarget(ev)) markSaveIntent();
+      if (eventPathIncludesSaveTarget(ev)) markSaveIntent(ev);
     };
     document.addEventListener("click", onIntent, true);
-    document.addEventListener(
-      "pointerdown",
-      (ev) => {
-        if (eventPathIncludesSaveTarget(ev)) markSaveIntent();
-      },
-      true
-    );
+    document.addEventListener("pointerdown", onIntent, true);
   }
 
   function togglePill(btn, list) {
@@ -360,13 +539,6 @@
     }, 1200);
   }
 
-  async function appendLog(entry) {
-    const data = await chrome.storage.local.get(STORAGE_KEY);
-    const logs = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
-    logs.push(entry);
-    await chrome.storage.local.set({ [STORAGE_KEY]: logs });
-  }
-
   function showOverlay() {
     if (overlayEl) return;
 
@@ -380,10 +552,26 @@
     const card = document.createElement("div");
     card.className = "linger-card";
 
+    const overlayPreviewUrl = resolveOverlayPreviewUrl();
+
+    const mediaCol = document.createElement("div");
+    mediaCol.className =
+      "linger-media" +
+      (overlayPreviewUrl ? "" : " linger-media--placeholder");
+    if (overlayPreviewUrl) {
+      const previewImg = document.createElement("img");
+      previewImg.src = overlayPreviewUrl;
+      previewImg.alt = "";
+      mediaCol.appendChild(previewImg);
+    }
+
+    const contentCol = document.createElement("div");
+    contentCol.className = "linger-content";
+
     const header = document.createElement("div");
     header.className = "linger-header";
     header.innerHTML =
-      '<div><div class="linger-logo">Linger<span class="linger-logo-dot">.</span></div><div class="linger-sub">What do you love about this pin?</div></div>';
+      '<div class="linger-logo">Linger<span class="linger-logo-dot">.</span></div><div class="linger-sub">What do you love about this pin?</div>';
 
     const step1 = document.createElement("div");
     step1.className = "linger-step";
@@ -442,8 +630,9 @@
     logBtn.addEventListener("click", async () => {
       if (regionsState.length === 0) return;
       const note = (noteInput.value || "").trim().slice(0, 80);
+      const entryId = crypto.randomUUID();
       const entry = {
-        id: crypto.randomUUID(),
+        id: entryId,
         timestamp: new Date().toISOString(),
         url: pinUrlFromPage(),
         regions: [...regionsState],
@@ -451,6 +640,7 @@
         note: note || undefined,
       };
       if (!entry.note) delete entry.note;
+      const captureSrc = overlayPreviewUrl;
       try {
         await appendLog(entry);
       } catch (e) {
@@ -460,16 +650,22 @@
       setSkipStreak(0);
       logBtn.disabled = true;
       showSuccessThenDismiss(card);
+      void captureImageAsBase64(captureSrc).then((b64) => {
+        if (b64) patchLogThumbnail(entryId, b64);
+      });
     });
 
     actions.appendChild(skip);
     actions.appendChild(logBtn);
 
-    card.appendChild(header);
-    card.appendChild(step1);
-    card.appendChild(step2);
-    card.appendChild(step3);
-    card.appendChild(actions);
+    contentCol.appendChild(header);
+    contentCol.appendChild(step1);
+    contentCol.appendChild(step2);
+    contentCol.appendChild(step3);
+    contentCol.appendChild(actions);
+
+    card.appendChild(mediaCol);
+    card.appendChild(contentCol);
     root.appendChild(card);
     document.documentElement.appendChild(root);
     overlayEl = root;

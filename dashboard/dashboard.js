@@ -94,6 +94,24 @@
       time.className = "dash-card-time";
       time.textContent = relativeTime(row.timestamp);
       card.appendChild(time);
+
+      const body = document.createElement("div");
+      body.className = "dash-card-body";
+
+      const thumb = document.createElement("div");
+      if (row.thumbnail) {
+        thumb.className = "dash-card-thumb";
+        const img = document.createElement("img");
+        img.src = row.thumbnail;
+        img.alt = "";
+        thumb.appendChild(img);
+      } else {
+        thumb.className = "dash-card-thumb dash-card-thumb--placeholder";
+      }
+      body.appendChild(thumb);
+
+      const main = document.createElement("div");
+      main.className = "dash-card-main";
       const pills = document.createElement("div");
       pills.className = "dash-card-pills";
       for (const r of row.regions || []) {
@@ -108,13 +126,15 @@
         p.textContent = t;
         pills.appendChild(p);
       }
-      card.appendChild(pills);
+      main.appendChild(pills);
       if (row.note) {
         const note = document.createElement("p");
         note.className = "dash-card-note";
         note.textContent = row.note;
-        card.appendChild(note);
+        main.appendChild(note);
       }
+      body.appendChild(main);
+      card.appendChild(body);
       container.appendChild(card);
     }
   }
