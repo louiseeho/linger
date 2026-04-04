@@ -1,1 +1,4 @@
 docs/
+
+.env
+linger-config.local.json

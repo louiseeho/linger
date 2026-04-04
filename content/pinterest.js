@@ -8,23 +8,6 @@
   const POLL_MS = 220;
   const POLL_MAX_TICKS = 18;
 
-  const REGIONS = [
-    "Top",
-    "Bottoms",
-    "Shoes",
-    "Accessories",
-    "The whole combo",
-  ];
-  const TAGS = [
-    "Silhouette",
-    "Colour palette",
-    "Texture or fabric",
-    "Proportions",
-    "How it's styled",
-    "The vibe",
-    "A specific item",
-  ];
-
   const STORAGE_BUDGET_BYTES = 8 * 1024 * 1024;
 
   let debounceTimer = null;
@@ -33,6 +16,14 @@
   let pollTimer = null;
   let pollTicks = 0;
   let lastPinPreviewUrl = null;
+
+  /** One capital at the start of the phrase; rest lower — consistent UI for chips and pills. */
+  function toSentenceCase(s) {
+    const t = String(s || "").trim();
+    if (!t) return t;
+    const lower = t.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }
 
   function getSkipStreak() {
     const n = parseInt(sessionStorage.getItem(SKIP_KEY) || "0", 10);
@@ -210,27 +201,138 @@
     });
   }
 
+  async function captureImageAsBase64WithMax(imageUrl, maxSide) {
+    if (!imageUrl) return null;
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const scale = Math.min(maxSide / img.width, maxSide / img.height, 1);
+            canvas.width = Math.max(1, Math.round(img.width * scale));
+            canvas.height = Math.max(1, Math.round(img.height * scale));
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve(null);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", 0.88));
+          } catch (_) {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = imageUrl;
+      } catch (_) {
+        resolve(null);
+      }
+    });
+  }
+
+  /** False after the extension is reloaded while this tab still runs an old content script. */
+  function extensionContextAlive() {
+    try {
+      return !!(
+        typeof chrome !== "undefined" &&
+        chrome.runtime &&
+        chrome.runtime.id
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function isContextInvalidatedMessage(msg) {
+    return /context invalidated|extension context/i.test(String(msg || ""));
+  }
+
+  function storageLocalGet(keys) {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!extensionContextAlive()) {
+          reject(new Error("Extension context invalidated"));
+          return;
+        }
+        chrome.storage.local.get(keys, (data) => {
+          const err = chrome.runtime.lastError;
+          if (err) {
+            reject(new Error(err.message));
+            return;
+          }
+          resolve(data);
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  function storageLocalSet(obj) {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!extensionContextAlive()) {
+          reject(new Error("Extension context invalidated"));
+          return;
+        }
+        chrome.storage.local.set(obj, () => {
+          const err = chrome.runtime.lastError;
+          if (err) {
+            reject(new Error(err.message));
+            return;
+          }
+          resolve();
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  function sendGeminiMessage(payload) {
+    return new Promise((resolve) => {
+      try {
+        if (!extensionContextAlive()) {
+          resolve({ ok: false, error: "Extension context invalidated" });
+          return;
+        }
+        chrome.runtime.sendMessage(payload, (response) => {
+          const err = chrome.runtime.lastError;
+          if (err) {
+            resolve({ ok: false, error: err.message });
+            return;
+          }
+          resolve(response || { ok: false, error: "No response" });
+        });
+      } catch (e) {
+        resolve({ ok: false, error: String(e.message || e) });
+      }
+    });
+  }
+
   async function appendLog(entry) {
-    const data = await chrome.storage.local.get(STORAGE_KEY);
+    const data = await storageLocalGet(STORAGE_KEY);
     const logs = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
     pruneThumbnailsIfOverBudget(logs);
     entry.thumbnail = null;
     logs.push(entry);
-    await chrome.storage.local.set({ [STORAGE_KEY]: logs });
+    await storageLocalSet({ [STORAGE_KEY]: logs });
   }
 
   async function patchLogThumbnail(id, dataUrl) {
     if (!dataUrl) return;
-    const data = await chrome.storage.local.get(STORAGE_KEY);
-    const logs = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
-    const row = logs.find((x) => x.id === id);
-    if (!row) return;
-    row.thumbnail = dataUrl;
-    pruneThumbnailsIfOverBudget(logs);
     try {
-      await chrome.storage.local.set({ [STORAGE_KEY]: logs });
+      if (!extensionContextAlive()) return;
+      const data = await storageLocalGet(STORAGE_KEY);
+      const logs = Array.isArray(data[STORAGE_KEY]) ? data[STORAGE_KEY] : [];
+      const row = logs.find((x) => x.id === id);
+      if (!row) return;
+      row.thumbnail = dataUrl;
+      pruneThumbnailsIfOverBudget(logs);
+      await storageLocalSet({ [STORAGE_KEY]: logs });
     } catch (e) {
-      row.thumbnail = null;
       console.error("Linger: failed to store thumbnail", e);
     }
   }
@@ -472,58 +574,9 @@
     document.addEventListener("pointerdown", onIntent, true);
   }
 
-  function togglePill(btn, list) {
-    btn.classList.toggle("linger-pill--selected");
-    const label = btn.dataset.value;
-    const i = list.indexOf(label);
-    if (btn.classList.contains("linger-pill--selected")) {
-      if (i < 0) list.push(label);
-    } else if (i >= 0) list.splice(i, 1);
-  }
-
-  function buildPills(values, multiselect, stateArray) {
-    const wrap = document.createElement("div");
-    wrap.className = "linger-pills";
-    for (const v of values) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "linger-pill";
-      b.dataset.value = v;
-      b.textContent = v;
-      b.addEventListener("click", () => {
-        if (multiselect) {
-          togglePill(b, stateArray);
-        } else {
-          wrap.querySelectorAll(".linger-pill").forEach((p) => {
-            p.classList.remove("linger-pill--selected");
-          });
-          stateArray.length = 0;
-          b.classList.add("linger-pill--selected");
-          stateArray.push(v);
-        }
-        updateLogEnabled();
-      });
-      wrap.appendChild(b);
-    }
-    return wrap;
-  }
-
-  let regionsState = [];
-  let tagsState = [];
-  let noteInput = null;
-  let logBtn = null;
-
-  function updateLogEnabled() {
-    if (logBtn) logBtn.disabled = regionsState.length === 0;
-  }
-
   function removeOverlay() {
     if (overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
     overlayEl = null;
-    regionsState = [];
-    tagsState = [];
-    noteInput = null;
-    logBtn = null;
   }
 
   function showSuccessThenDismiss(card) {
@@ -541,9 +594,6 @@
 
   function showOverlay() {
     if (overlayEl) return;
-
-    regionsState = [];
-    tagsState = [];
 
     const root = document.createElement("div");
     root.className = "linger-root";
@@ -571,48 +621,29 @@
     const header = document.createElement("div");
     header.className = "linger-header";
     header.innerHTML =
-      '<div class="linger-logo">Linger<span class="linger-logo-dot">.</span></div><div class="linger-sub">What do you love about this pin?</div>';
+      '<div class="linger-logo">Linger<span class="linger-logo-dot">.</span></div><div class="linger-sub">Select what you love.</div>';
 
-    const step1 = document.createElement("div");
-    step1.className = "linger-step";
-    const l1 = document.createElement("div");
-    l1.className = "linger-step-label";
-    l1.textContent = "Step 1 — Which part?";
-    step1.appendChild(l1);
-    step1.appendChild(buildPills(REGIONS, true, regionsState));
+    const panel = document.createElement("div");
+    panel.className = "linger-ai-panel";
 
-    const step2 = document.createElement("div");
-    step2.className = "linger-step";
-    const l2 = document.createElement("div");
-    l2.className = "linger-step-label";
-    l2.textContent = "Step 2 — What about it?";
-    step2.appendChild(l2);
-    step2.appendChild(buildPills(TAGS, true, tagsState));
+    const CUSTOM_FOCUS_MAX = 200;
 
-    const step3 = document.createElement("div");
-    step3.className = "linger-step";
-    const l3 = document.createElement("div");
-    l3.className = "linger-step-label";
-    l3.textContent = "Step 3 — Anything else? (optional)";
-    noteInput = document.createElement("textarea");
-    noteInput.className = "linger-note";
-    noteInput.rows = 2;
-    noteInput.maxLength = 80;
-    noteInput.placeholder = "A few words…";
-    const hint = document.createElement("div");
-    hint.className = "linger-note-hint";
-    const syncHint = () => {
-      hint.textContent = `${noteInput.value.length} / 80`;
+    const state = {
+      imageBase64: null,
+      mimeType: "image/jpeg",
+      labels: [],
+      itemListReady: false,
+      staged: [],
+      attrCache: Object.create(null),
+      currentItemLabel: null,
+      currentUserFocus: false,
+      attrSelected: [],
+      attrChoices: [],
     };
-    noteInput.addEventListener("input", syncHint);
-    syncHint();
-    step3.appendChild(l3);
-    step3.appendChild(noteInput);
-    step3.appendChild(hint);
 
     const actions = document.createElement("div");
     actions.className = "linger-actions";
-    logBtn = document.createElement("button");
+    const logBtn = document.createElement("button");
     logBtn.type = "button";
     logBtn.className = "linger-btn-log";
     logBtn.textContent = "Log it";
@@ -622,29 +653,363 @@
     skip.className = "linger-skip";
     skip.textContent = "Skip";
 
+    function setLogEnabled() {
+      logBtn.disabled = state.staged.length === 0;
+      logBtn.textContent =
+        state.staged.length > 0
+          ? "Log it (" + state.staged.length + ")"
+          : "Log it";
+    }
+
+    function clearPanel() {
+      panel.innerHTML = "";
+    }
+
+    function showShimmer(caption) {
+      clearPanel();
+      const wrap = document.createElement("div");
+      wrap.className = "linger-shimmer-wrap";
+      const cap = document.createElement("div");
+      cap.className = "linger-shimmer-caption";
+      cap.textContent = caption;
+      wrap.appendChild(cap);
+      for (let i = 0; i < 5; i++) {
+        const row = document.createElement("div");
+        row.className = "linger-shimmer-row";
+        wrap.appendChild(row);
+      }
+      panel.appendChild(wrap);
+    }
+
+    function showError(msg, showBackToGrid) {
+      clearPanel();
+      const invalidated = isContextInvalidatedMessage(msg);
+      const p = document.createElement("p");
+      p.className = "linger-ai-error";
+      p.textContent = invalidated
+        ? "This tab is still running an old Linger session (common right after you reload the extension in Chrome)."
+        : msg;
+      panel.appendChild(p);
+      const hint = document.createElement("p");
+      hint.className = "linger-ai-error-hint";
+      hint.textContent = invalidated
+        ? "Refresh this Pinterest page once (F5 or the reload button). After that, saves and AI will work again."
+        : "Add LINGER_GEMINI_API_KEY to a .env file in the extension folder, run npm run sync-env to create linger-config.local.json, then reload the extension. Get a key from Google AI Studio.";
+      panel.appendChild(hint);
+      if (showBackToGrid && state.itemListReady) {
+        const back = document.createElement("button");
+        back.type = "button";
+        back.className = "linger-ai-back";
+        back.textContent = "\u2190 Back to items";
+        back.addEventListener("click", () => renderItemGrid());
+        panel.appendChild(back);
+      }
+    }
+
+    function stagedHas(label) {
+      return state.staged.some((x) => x.label === label);
+    }
+
+    function renderItemGrid() {
+      clearPanel();
+      if (state.staged.length > 0) {
+        const sum = document.createElement("div");
+        sum.className = "linger-ai-staged-sum";
+        sum.textContent =
+          state.staged.length +
+          " piece" +
+          (state.staged.length === 1 ? "" : "s") +
+          " queued to log.";
+        panel.appendChild(sum);
+      }
+      const lab = document.createElement("div");
+      lab.className = "linger-step-label";
+      lab.textContent = "What stands out?";
+      panel.appendChild(lab);
+      if (state.labels.length === 0) {
+        const emptyHint = document.createElement("p");
+        emptyHint.className = "linger-ai-custom-hint";
+        emptyHint.textContent =
+          "We didn\u2019t pick out separate pieces on this pin. You can still describe what you love below.";
+        panel.appendChild(emptyHint);
+      }
+      const grid = document.createElement("div");
+      grid.className = "linger-item-grid";
+      state.labels.forEach((label) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "linger-item-card";
+        if (stagedHas(label)) btn.classList.add("linger-item-card--done");
+        btn.textContent = label;
+        btn.addEventListener("click", () => {
+          void openAttributeFlow(label, { userFocus: false });
+        });
+        grid.appendChild(btn);
+      });
+      panel.appendChild(grid);
+
+      const customWrap = document.createElement("div");
+      customWrap.className = "linger-custom-focus";
+      const customLab = document.createElement("div");
+      customLab.className = "linger-step-label";
+      customLab.style.marginTop = "14px";
+      customLab.textContent = "Or describe it yourself";
+      const customTa = document.createElement("textarea");
+      customTa.className = "linger-note";
+      customTa.rows = 2;
+      customTa.maxLength = CUSTOM_FOCUS_MAX;
+      customTa.placeholder =
+        "e.g. how the top and bottom work together, the whole look, a vibe\u2026";
+      const customHint = document.createElement("div");
+      customHint.className = "linger-note-hint";
+      const syncCustomHint = () => {
+        customHint.textContent =
+          customTa.value.length + " / " + CUSTOM_FOCUS_MAX;
+      };
+      customTa.addEventListener("input", syncCustomHint);
+      syncCustomHint();
+      const customErr = document.createElement("div");
+      customErr.className = "linger-custom-focus-error linger-hidden";
+      customErr.setAttribute("aria-live", "polite");
+      const customBtn = document.createElement("button");
+      customBtn.type = "button";
+      customBtn.className = "linger-custom-focus-submit";
+      customBtn.textContent = "Continue with what I wrote";
+      customBtn.addEventListener("click", () => {
+        customErr.classList.add("linger-hidden");
+        const text = toSentenceCase(
+          (customTa.value || "").trim().slice(0, CUSTOM_FOCUS_MAX)
+        );
+        if (!text) {
+          customErr.textContent = "Add a short description to continue.";
+          customErr.classList.remove("linger-hidden");
+          return;
+        }
+        void openAttributeFlow(text, { userFocus: true });
+      });
+      customWrap.appendChild(customLab);
+      customWrap.appendChild(customTa);
+      customWrap.appendChild(customHint);
+      customWrap.appendChild(customErr);
+      customWrap.appendChild(customBtn);
+      panel.appendChild(customWrap);
+    }
+
+    function filterAttrPills(attrs) {
+      const out = [];
+      const seen = Object.create(null);
+      for (const a of attrs) {
+        if (typeof a !== "string") continue;
+        const t = a.trim();
+        if (!t || t === "\u2014" || t === "—") continue;
+        const sc = toSentenceCase(t);
+        const k = sc.toLowerCase();
+        if (seen[k]) continue;
+        seen[k] = true;
+        out.push(sc);
+      }
+      return out;
+    }
+
+    function renderAttributeView() {
+      clearPanel();
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "linger-ai-back";
+      back.textContent = "\u2190 Back to items";
+      back.addEventListener("click", () => renderItemGrid());
+
+      const title = document.createElement("div");
+      title.className =
+        "linger-step-label" +
+        (state.currentUserFocus ? " linger-step-label--focus-body" : "");
+      title.style.marginTop = "2px";
+      title.textContent = state.currentItemLabel;
+
+      const sub = document.createElement("div");
+      sub.className = "linger-ai-sub";
+      sub.textContent = state.currentUserFocus
+        ? "What do you love about that? Pick any that fit."
+        : "What do you love about it?";
+
+      const pills = document.createElement("div");
+      pills.className = "linger-pills";
+      state.attrChoices.forEach((attr) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "linger-pill";
+        b.dataset.value = attr;
+        b.textContent = attr;
+        if (state.attrSelected.includes(attr))
+          b.classList.add("linger-pill--selected");
+        b.addEventListener("click", () => {
+          const idx = state.attrSelected.indexOf(attr);
+          if (idx >= 0) {
+            state.attrSelected.splice(idx, 1);
+            b.classList.remove("linger-pill--selected");
+          } else {
+            state.attrSelected.push(attr);
+            b.classList.add("linger-pill--selected");
+          }
+        });
+        pills.appendChild(b);
+      });
+
+      const noteLab = document.createElement("div");
+      noteLab.className = "linger-step-label";
+      noteLab.style.marginTop = "10px";
+      noteLab.textContent = "Your words (optional)";
+
+      const ta = document.createElement("textarea");
+      ta.className = "linger-note";
+      ta.rows = 2;
+      ta.maxLength = 200;
+      ta.placeholder = "Anything else?";
+      const existing = state.staged.find((x) => x.label === state.currentItemLabel);
+      ta.value = (existing && existing.note) || "";
+      const hint = document.createElement("div");
+      hint.className = "linger-note-hint";
+      const sync = () => {
+        hint.textContent = ta.value.length + " / 200";
+      };
+      ta.addEventListener("input", sync);
+      sync();
+
+      const done = document.createElement("button");
+      done.type = "button";
+      done.className = "linger-btn-log linger-btn-log--secondary";
+      done.style.marginTop = "12px";
+      done.textContent = "Done with this piece";
+      done.addEventListener("click", () => {
+        const note = (ta.value || "").trim().slice(0, 200);
+        const attrs = [...state.attrSelected];
+        state.staged = state.staged.filter((x) => x.label !== state.currentItemLabel);
+        const row = {
+          label: state.currentItemLabel,
+          attributes: attrs,
+        };
+        if (note) row.note = note;
+        state.staged.push(row);
+        setLogEnabled();
+        renderItemGrid();
+      });
+
+      panel.appendChild(back);
+      panel.appendChild(title);
+      panel.appendChild(sub);
+      panel.appendChild(pills);
+      panel.appendChild(noteLab);
+      panel.appendChild(ta);
+      panel.appendChild(hint);
+      panel.appendChild(done);
+    }
+
+    function attrCacheKey(label, userFocus) {
+      return userFocus ? "\ufefffocus:" + label : label;
+    }
+
+    async function openAttributeFlow(label, opts) {
+      const userFocus = opts && opts.userFocus === true;
+      state.currentItemLabel = label;
+      state.currentUserFocus = userFocus;
+      const existing = state.staged.find((x) => x.label === label);
+      state.attrSelected = existing ? [...(existing.attributes || [])] : [];
+
+      const cKey = attrCacheKey(label, userFocus);
+      const cached = state.attrCache[cKey];
+      if (cached) {
+        showShimmer("Refreshing details\u2026");
+        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 120)));
+        state.attrChoices = filterAttrPills(cached);
+        renderAttributeView();
+        return;
+      }
+
+      showShimmer(
+        userFocus
+          ? "Thinking about what you said\u2026"
+          : "Describing \u201c" + label + "\u201d\u2026"
+      );
+
+      const r = await sendGeminiMessage({
+        type: "LINGER_GEMINI_ATTRIBUTES",
+        imageBase64: state.imageBase64,
+        mimeType: state.mimeType,
+        itemLabel: label,
+        userFocus: userFocus,
+      });
+
+      if (!r.ok) {
+        showError(
+          r.error || "Couldn\u2019t describe this item.",
+          !isContextInvalidatedMessage(r.error) && state.itemListReady
+        );
+        return;
+      }
+      const raw = Array.isArray(r.attributes) ? r.attributes : [];
+      state.attrCache[cKey] = raw;
+      state.attrChoices = filterAttrPills(raw);
+      renderAttributeView();
+    }
+
+    async function runListItems() {
+      showShimmer("Scanning the pin\u2026");
+      const hi = await captureImageAsBase64WithMax(overlayPreviewUrl, 896);
+      if (!hi) {
+        showError("Could not read this image.", false);
+        return;
+      }
+      const comma = hi.indexOf(",");
+      state.imageBase64 = comma >= 0 ? hi.slice(comma + 1) : hi;
+      const r = await sendGeminiMessage({
+        type: "LINGER_GEMINI_ITEMS",
+        imageBase64: state.imageBase64,
+        mimeType: state.mimeType,
+      });
+      if (!r.ok) {
+        showError(
+          r.error || "AI request failed.",
+          !isContextInvalidatedMessage(r.error) && state.itemListReady
+        );
+        return;
+      }
+      const rawLabels = Array.isArray(r.items) ? r.items : [];
+      state.labels = rawLabels
+        .map((s) =>
+          typeof s === "string" ? toSentenceCase(s.trim()) : ""
+        )
+        .filter(Boolean)
+        .slice(0, 6);
+      state.itemListReady = true;
+      renderItemGrid();
+    }
+
     skip.addEventListener("click", () => {
       setSkipStreak(getSkipStreak() + 1);
       removeOverlay();
     });
 
     logBtn.addEventListener("click", async () => {
-      if (regionsState.length === 0) return;
-      const note = (noteInput.value || "").trim().slice(0, 80);
+      if (state.staged.length === 0) return;
       const entryId = crypto.randomUUID();
       const entry = {
         id: entryId,
         timestamp: new Date().toISOString(),
         url: pinUrlFromPage(),
-        regions: [...regionsState],
-        tags: [...tagsState],
-        note: note || undefined,
+        items: state.staged.map(({ label, attributes, note }) => {
+          const row = { label, attributes: [...(attributes || [])] };
+          if (note && String(note).trim()) row.note = String(note).trim();
+          return row;
+        }),
       };
-      if (!entry.note) delete entry.note;
       const captureSrc = overlayPreviewUrl;
       try {
         await appendLog(entry);
       } catch (e) {
         console.error("Linger: failed to save log", e);
+        if (isContextInvalidatedMessage(e.message)) {
+          showError(e.message, false);
+        }
         return;
       }
       setSkipStreak(0);
@@ -659,9 +1024,7 @@
     actions.appendChild(logBtn);
 
     contentCol.appendChild(header);
-    contentCol.appendChild(step1);
-    contentCol.appendChild(step2);
-    contentCol.appendChild(step3);
+    contentCol.appendChild(panel);
     contentCol.appendChild(actions);
 
     card.appendChild(mediaCol);
@@ -670,6 +1033,9 @@
     document.documentElement.appendChild(root);
     overlayEl = root;
     stopSavePoll();
+
+    setLogEnabled();
+    void runListItems();
   }
 
   function boot() {

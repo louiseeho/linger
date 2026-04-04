@@ -71,10 +71,18 @@ body::-webkit-scrollbar {
 }
 
 .dash-summary {
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   font-size: 0.85rem;
   line-height: 1.45;
   color: #3d3d3a;
+}
+
+.dash-taxonomy-status {
+  margin: 0 0 14px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #6b6b66;
+  min-height: 1.2em;
 }
 
 .dash-stat {
@@ -195,6 +203,14 @@ body::-webkit-scrollbar {
 .dash-card-main {
   flex: 1;
   min-width: 0;
+}
+
+.dash-item-block {
+  margin-bottom: 10px;
+}
+
+.dash-item-block:last-child {
+  margin-bottom: 0;
 }
 
 .dash-card-time {

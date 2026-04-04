@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "A mindful saving tool for Pinterest — notice what you love as you save.",
   "permissions": ["storage", "activeTab", "scripting"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "host_permissions": [
     "*://*.pinterest.com/*",
     "*://pinterest.com/*",
@@ -27,7 +30,8 @@
     "*://*.urbanoutfitters.com/*",
     "*://*.nordstrom.com/*",
     "*://*.net-a-porter.com/*",
-    "*://*.shopify.com/*"
+    "*://*.shopify.com/*",
+    "https://generativelanguage.googleapis.com/*"
   ],
   "action": {
     "default_popup": "dashboard/dashboard.html",

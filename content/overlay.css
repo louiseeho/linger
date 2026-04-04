@@ -263,6 +263,202 @@
   }
 }
 
+.linger-hidden {
+  display: none !important;
+}
+
+.linger-ai-panel {
+  min-height: 120px;
+}
+
+.linger-ai-custom-hint {
+  font-size: 0.78rem;
+  color: #6b6b66;
+  line-height: 1.4;
+  margin: 0 0 10px;
+}
+
+.linger-custom-focus {
+  margin-top: 4px;
+}
+
+.linger-custom-focus .linger-note {
+  margin-top: 6px;
+}
+
+.linger-custom-focus-error {
+  font-size: 0.72rem;
+  color: #b03e3c;
+  margin-top: 8px;
+}
+
+.linger-custom-focus-submit {
+  appearance: none;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid #2c2c2a;
+  border-radius: 12px;
+  background: #fff;
+  color: #2c2c2a;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.linger-custom-focus-submit:hover {
+  background: rgba(44, 44, 42, 0.04);
+}
+
+.linger-custom-focus-submit:focus-visible {
+  outline: 2px solid #8a9e8c;
+  outline-offset: 2px;
+}
+
+.linger-step-label--focus-body {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: #2c2c2a;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.linger-ai-sub {
+  font-size: 0.8rem;
+  color: #6b6b66;
+  margin: 0 0 10px;
+  line-height: 1.35;
+}
+
+.linger-shimmer-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.linger-shimmer-caption {
+  font-size: 0.78rem;
+  color: #6b6b66;
+  margin-bottom: 4px;
+}
+
+.linger-shimmer-row {
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    #ebe6df 0%,
+    #f5f2eb 45%,
+    #ebe6df 90%
+  );
+  background-size: 200% 100%;
+  animation: linger-shimmer 1.1s ease-in-out infinite;
+}
+
+@keyframes linger-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.linger-item-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.linger-item-card {
+  appearance: none;
+  border: 1px solid #d8d4cc;
+  background: #fff;
+  color: #2c2c2a;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  padding: 10px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease,
+    box-shadow 0.15s ease;
+  min-height: 44px;
+}
+
+.linger-item-card:hover {
+  border-color: #8a9e8c;
+  background: rgba(138, 158, 140, 0.06);
+}
+
+.linger-item-card:focus-visible {
+  outline: 2px solid #8a9e8c;
+  outline-offset: 2px;
+}
+
+.linger-item-card--done {
+  border-color: #8a9e8c;
+  background: rgba(138, 158, 140, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(138, 158, 140, 0.25);
+}
+
+.linger-ai-staged-sum {
+  font-size: 0.75rem;
+  color: #5a6b5c;
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.linger-ai-back {
+  display: block;
+  margin: 0 0 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #6b6b66;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-align: left;
+}
+
+.linger-ai-back:hover {
+  color: #2c2c2a;
+}
+
+.linger-ai-error {
+  font-size: 0.85rem;
+  color: #2c2c2a;
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+.linger-ai-error-hint {
+  font-size: 0.72rem;
+  color: #6b6b66;
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.linger-btn-log.linger-btn-log--secondary {
+  width: 100%;
+  background: #fff;
+  color: #2c2c2a;
+  border: 1px solid #2c2c2a;
+}
+
+.linger-btn-log.linger-btn-log--secondary:hover:not(:disabled) {
+  background: rgba(44, 44, 42, 0.04);
+}
+
 @media (max-width: 560px) {
   .linger-card:not(.linger-card--success) {
     flex-direction: column;

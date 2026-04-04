@@ -237,12 +237,38 @@
     return null;
   }
 
+  function inferRegionFromItemLabel(label) {
+    if (!label || typeof label !== "string") return null;
+    const s = label.toLowerCase();
+    const shoeKw =
+      /\b(boot|boots|heel|heels|sneaker|sneakers|loafer|loafers|oxford|oxfords|sandal|sandals|mule|mules|flat|flats|footwear|trainer|trainers|pump|pumps|clog|clogs|slide|slides|espadrille)\b/;
+    const accKw =
+      /\b(bag|bags|tote|clutch|earring|earrings|necklace|necklaces|bracelet|bracelets|ring|rings|belt|belts|hat|hats|scarf|scarves|watch|watches|sunglass|sunglasses|wallet|wallets|headband|hair\s+clip|brooch)\b/;
+    const bottomKw =
+      /\b(jean|jeans|trouser|trousers|pant|pants|skirt|skirts|short|shorts|legging|leggings|jogger|joggers|culotte)\b/;
+    const topKw =
+      /\b(shirt|shirts|top|tops|blouse|blouses|tee|tees|t-shirt|sweater|sweaters|cardigan|cardigans|jacket|jackets|coat|coats|blazer|blazers|hoodie|hoodies|crop|crops|tank|tanks|bodysuit|bodysuits|knit|knits|polo|henley)\b/;
+    if (shoeKw.test(s)) return "shoes";
+    if (accKw.test(s)) return "accessories";
+    if (bottomKw.test(s)) return "bottoms";
+    if (topKw.test(s)) return "tops";
+    return null;
+  }
+
   function getTasteProfile(logs) {
     const counts = { tops: 0, bottoms: 0, shoes: 0, accessories: 0 };
     logs.forEach((log) => {
       const regs = Array.isArray(log.regions) ? log.regions : [];
-      regs.forEach((r) => {
-        const key = normalizeLogRegion(r);
+      if (regs.length) {
+        regs.forEach((r) => {
+          const key = normalizeLogRegion(r);
+          if (key && counts[key] !== undefined) counts[key]++;
+        });
+        return;
+      }
+      const items = Array.isArray(log.items) ? log.items : [];
+      items.forEach((it) => {
+        const key = inferRegionFromItemLabel(it && it.label);
         if (key && counts[key] !== undefined) counts[key]++;
       });
     });

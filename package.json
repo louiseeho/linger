@@ -1,0 +1,7 @@
+{
+  "name": "linger",
+  "private": true,
+  "scripts": {
+    "sync-env": "node scripts/sync-env.js"
+  }
+}
