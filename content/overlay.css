@@ -102,16 +102,41 @@
 }
 
 .linger-logo {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.15rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #2c2c2a;
-  line-height: 1.2;
+  line-height: 0;
 }
 
-.linger-logo-dot {
-  color: #e24b4a;
+.linger-logo-img {
+  display: block;
+  width: auto;
+  max-width: min(200px, 100%);
+  height: auto;
+  max-height: 40px;
+}
+
+/* Gemini loading: Lottie wordmark (icons/linger.json) */
+.linger-brand-load {
+  position: relative;
+  width: 100%;
+  min-height: 72px;
+  margin: 6px 0 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.linger-lottie-host {
+  width: 100%;
+  max-width: 320px;
+  min-height: 72px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.linger-lottie-host svg {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 96px;
 }
 
 .linger-sub {

@@ -5,8 +5,6 @@
   const STORAGE_DISMISSALS = "linger_intervention_dismissals";
   const SESSION_DISMISSED = "linger_intervention_dismissed";
   const SHOW_DELAY_MS = 1500;
-  const MIN_LOGS = 5;
-  const THRESHOLD_PCT = 20;
 
   /**
    * kg CO₂e ballpark for new item (manufacturing + shipping).
@@ -227,6 +225,302 @@
     return null;
   }
 
+  function hasLikelyProductPage() {
+    const og = document.querySelector('meta[property="og:type"]');
+    if (og && /product/i.test(og.getAttribute("content") || "")) return true;
+    try {
+      for (const s of document.querySelectorAll(
+        'script[type="application/ld+json"]'
+      )) {
+        const j = JSON.parse(s.textContent || "{}");
+        const list = Array.isArray(j) ? j : [j];
+        for (const node of list) {
+          if (!node || typeof node !== "object") continue;
+          const types = [].concat(node["@type"] || []);
+          for (const t of types) {
+            if (String(t).toLowerCase().includes("product")) return true;
+          }
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return false;
+  }
+
+  function getProductTitle() {
+    const og = document.querySelector('meta[property="og:title"]');
+    if (og) {
+      const c = (og.getAttribute("content") || "").trim();
+      if (c.length > 2 && c.length < 300) return c;
+    }
+    const h1 = document.querySelector("h1");
+    if (h1) {
+      const t = (h1.textContent || "").trim().replace(/\s+/g, " ");
+      if (t.length > 1 && t.length < 280) return t;
+    }
+    return (
+      (document.title || "").replace(/\s*[|\-–—].*$/, "").trim().slice(0, 200) ||
+      "Product"
+    );
+  }
+
+  function getProductDescriptionText() {
+    const parts = [];
+    const addMeta = (sel) => {
+      const m = document.querySelector(sel);
+      const c = m && (m.getAttribute("content") || "").trim();
+      if (c && c.length > 20) parts.push(c);
+    };
+    addMeta('meta[property="og:description"]');
+    addMeta('meta[name="description"]');
+    addMeta('meta[property="product:description"]');
+    const desc = document.querySelector(
+      '[itemprop="description"], .product-description, [data-product-description], #product-description'
+    );
+    if (desc) {
+      const t = (desc.textContent || "").trim().replace(/\s+/g, " ");
+      if (t.length > 20) parts.push(t.slice(0, 2500));
+    }
+    return parts.join("\n\n").slice(0, 5000);
+  }
+
+  function pickPrimaryProductImageUrl() {
+    const og = document.querySelector(
+      'meta[property="og:image"], meta[property="og:image:url"]'
+    );
+    if (og) {
+      const u = og.getAttribute("content");
+      if (u && /^https?:/i.test(u)) return u;
+    }
+    const tw = document.querySelector('meta[name="twitter:image"]');
+    if (tw) {
+      const u = tw.getAttribute("content");
+      if (u && /^https?:/i.test(u)) return u;
+    }
+    try {
+      for (const s of document.querySelectorAll(
+        'script[type="application/ld+json"]'
+      )) {
+        const j = JSON.parse(s.textContent || "{}");
+        const list = Array.isArray(j) ? j : [j];
+        for (const node of list) {
+          if (!node || typeof node !== "object") continue;
+          const types = [].concat(node["@type"] || []);
+          if (!types.some((t) => String(t).toLowerCase().includes("product")))
+            continue;
+          const img = node.image;
+          const url = Array.isArray(img)
+            ? img[0]
+            : typeof img === "object" && img
+              ? img.url
+              : img;
+          if (typeof url === "string" && /^https?:/i.test(url)) return url;
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    const prop = document.querySelector(
+      'img[itemprop="image"], img[data-main-image], .product-single__photo img, .product__media img'
+    );
+    if (prop && prop.src) return prop.currentSrc || prop.src;
+    const main = document.querySelector("main img[src], article img[src]");
+    if (
+      main &&
+      main.src &&
+      !/sprite|icon|logo|pixel|1x1/i.test(main.src)
+    ) {
+      return main.currentSrc || main.src;
+    }
+    return null;
+  }
+
+  async function captureUrlToJpegDataUrl(imageUrl, maxSide) {
+    if (!imageUrl) return null;
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const scale = Math.min(
+              maxSide / img.width,
+              maxSide / img.height,
+              1
+            );
+            canvas.width = Math.max(1, Math.round(img.width * scale));
+            canvas.height = Math.max(1, Math.round(img.height * scale));
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve(null);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", 0.85));
+          } catch (_) {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = imageUrl;
+      } catch (_) {
+        resolve(null);
+      }
+    });
+  }
+
+  function formatNumberedSnippets(logs) {
+    const lines = [];
+    let n = 1;
+    const sorted = [...logs].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    );
+    outer: for (const log of sorted.slice(0, 60)) {
+      if (Array.isArray(log.items) && log.items.length) {
+        for (const it of log.items) {
+          if (n > 85) break outer;
+          const bits = [];
+          if (it.label) bits.push(it.label);
+          if (Array.isArray(it.attributes) && it.attributes.length)
+            bits.push(it.attributes.join(", "));
+          if (it.note) bits.push(it.note);
+          if (bits.length) {
+            lines.push(n + ". " + bits.join(" | "));
+            n++;
+          }
+        }
+      } else {
+        const r = (log.regions || []).join(", ");
+        const t = (log.tags || []).join(", ");
+        if (r || t) {
+          lines.push(
+            n + ". regions: " + (r || "—") + " | tags: " + (t || "—")
+          );
+          n++;
+          if (n > 85) break;
+        }
+      }
+    }
+    return { text: lines.join("\n"), lineCount: Math.max(0, n - 1) };
+  }
+
+  function sendShopEchoMessage(payload) {
+    return new Promise((resolve) => {
+      try {
+        if (!chrome.runtime || !chrome.runtime.id) {
+          resolve({ ok: false, error: "Extension context invalidated" });
+          return;
+        }
+        chrome.runtime.sendMessage(payload, (response) => {
+          if (chrome.runtime.lastError) {
+            resolve({
+              ok: false,
+              error: chrome.runtime.lastError.message,
+            });
+            return;
+          }
+          resolve(response || { ok: false, error: "No response" });
+        });
+      } catch (e) {
+        resolve({ ok: false, error: String(e.message || e) });
+      }
+    });
+  }
+
+  async function runShopEchoPipeline(root, logs) {
+    const slot = root._lingerEchoSlot;
+    if (!slot) return;
+
+    const { text: numberedSnippets, lineCount: maxSnippetLine } =
+      formatNumberedSnippets(logs);
+    const title = getProductTitle();
+    const desc = getProductDescriptionText();
+    const imgUrl = pickPrimaryProductImageUrl();
+    let imageBase64 = null;
+    let thumbDataUrl = null;
+    const mimeType = "image/jpeg";
+    if (imgUrl) {
+      thumbDataUrl = await captureUrlToJpegDataUrl(imgUrl, 200);
+      const hi = await captureUrlToJpegDataUrl(imgUrl, 896);
+      if (hi) {
+        const comma = hi.indexOf(",");
+        imageBase64 = comma >= 0 ? hi.slice(comma + 1) : hi;
+      }
+    }
+
+    const res = await sendShopEchoMessage({
+      type: "LINGER_GEMINI_SHOP_ECHO",
+      imageBase64: imageBase64 || "",
+      mimeType,
+      productTitle: title,
+      productDescription: desc,
+      numberedSnippets,
+      maxSnippetLine,
+    });
+
+    if (!slot.parentNode) return;
+    fillEchoSlot(slot, res, thumbDataUrl, logs.length);
+  }
+
+  function fillEchoSlot(slot, res, thumbDataUrl, logLen) {
+    slot.innerHTML = "";
+    slot.classList.remove("linger-shop-echo--loading");
+    if (!res.ok) {
+      const err = document.createElement("p");
+      err.className = "linger-shop-echo-fallback";
+      err.textContent =
+        logLen === 0
+          ? "Save pins with Linger on Pinterest to see how this piece echoes your taste."
+          : "We couldn't run the AI match right now. Your saves are still in Linger when you're back.";
+      slot.appendChild(err);
+      return;
+    }
+
+    const row = document.createElement("div");
+    row.className = "linger-shop-echo-top";
+    if (thumbDataUrl) {
+      const th = document.createElement("div");
+      th.className = "linger-shop-echo-thumb";
+      const im = document.createElement("img");
+      im.src = thumbDataUrl;
+      im.alt = "";
+      th.appendChild(im);
+      row.appendChild(th);
+    }
+    const copy = document.createElement("div");
+    copy.className = "linger-shop-echo-copy";
+    if (res.product_blurb) {
+      const bl = document.createElement("p");
+      bl.className = "linger-shop-echo-blurb";
+      bl.textContent = res.product_blurb;
+      copy.appendChild(bl);
+    }
+    row.appendChild(copy);
+    slot.appendChild(row);
+
+    const echoes = Array.isArray(res.echoes) ? res.echoes : [];
+    if (echoes.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "linger-shop-echo-empty";
+      empty.textContent =
+        logLen === 0
+          ? "No Pinterest saves logged yet — this spot will compare future saves to pieces like this."
+          : "No strong overlap with your logged taste yet — worth noticing how this feels new or familiar.";
+      slot.appendChild(empty);
+      return;
+    }
+    const ul = document.createElement("ul");
+    ul.className = "linger-shop-echo-list";
+    echoes.forEach((e) => {
+      const li = document.createElement("li");
+      li.textContent = e.phrase || "";
+      ul.appendChild(li);
+    });
+    slot.appendChild(ul);
+  }
+
   function normalizeLogRegion(r) {
     if (!r || typeof r !== "string") return null;
     const k = r.toLowerCase().trim();
@@ -278,52 +572,6 @@
       percentages[k] = total > 0 ? Math.round((counts[k] / total) * 100) : 0;
     });
     return { counts, percentages, total };
-  }
-
-  function topRegionsByPercentage(percentages, exclude) {
-    return Object.entries(percentages)
-      .filter(([k]) => k !== exclude)
-      .sort((a, b) => b[1] - a[1])
-      .map(([k]) => k);
-  }
-
-  function buildInsight(percentages, currentRegion) {
-    const pct = percentages[currentRegion] ?? 0;
-    const others = topRegionsByPercentage(percentages, currentRegion);
-    const names = others
-      .slice(0, 2)
-      .map((k) => REGION_LABEL[k] || k)
-      .filter(Boolean);
-    const label = REGION_LABEL[currentRegion] || currentRegion;
-    if (names.length === 0) {
-      return `Only ${pct}% of your Pinterest saves are for ${label}.`;
-    }
-    const mostly =
-      names.length === 2 ? `${names[0]} and ${names[1]}` : names[0];
-    return `Only ${pct}% of your Pinterest saves are for ${label} — you mostly save for ${mostly}.`;
-  }
-
-  function getTopTasteRegion(percentages) {
-    const entries = Object.entries(percentages).sort((a, b) => {
-      if (b[1] !== a[1]) return b[1] - a[1];
-      return a[0].localeCompare(b[0]);
-    });
-    return entries[0] ? entries[0][0] : null;
-  }
-
-  function buildNudge(productRegion, topTasteRegion) {
-    if (productRegion === "tops") {
-      if (topTasteRegion === "bottoms") {
-        return "Your eye is really on the silhouette and the cut. Will this top make it into outfits you'd actually wear?";
-      }
-      if (topTasteRegion === "shoes") {
-        return "You tend to build outfits from the shoe up. Does this top fit that?";
-      }
-      if (topTasteRegion === "accessories") {
-        return "Accessories drive your saves more than anything. Is this piece filling a real gap?";
-      }
-    }
-    return "You've saved this category less than any other. Worth a pause before adding to cart.";
   }
 
   function extractRetailPriceAndCurrency() {
@@ -558,7 +806,7 @@
     });
   }
 
-  function showIntervention(productRegion, percentages, showTasteMismatch) {
+  function showIntervention(productRegion, percentages) {
     const root = document.createElement("div");
     root.className = "linger-shop-root";
     root.setAttribute("data-linger-shopping", "true");
@@ -570,14 +818,17 @@
     head.className = "linger-shop-head";
     const brand = document.createElement("div");
     brand.className = "linger-shop-brand";
-    const dot = document.createElement("span");
-    dot.className = "linger-shop-dot";
-    dot.setAttribute("aria-hidden", "true");
-    const name = document.createElement("span");
-    name.className = "linger-shop-name";
-    name.textContent = "Linger";
-    brand.appendChild(dot);
-    brand.appendChild(name);
+    const mark = document.createElement("img");
+    mark.className = "linger-shop-logo-mark";
+    mark.src = chrome.runtime.getURL("icons/small-logo.svg");
+    mark.alt = "";
+    mark.setAttribute("aria-hidden", "true");
+    const word = document.createElement("img");
+    word.className = "linger-shop-logo-word";
+    word.src = chrome.runtime.getURL("icons/full-logo.svg");
+    word.alt = "linger";
+    brand.appendChild(mark);
+    brand.appendChild(word);
     const dismissBtn = document.createElement("button");
     dismissBtn.type = "button";
     dismissBtn.className = "linger-shop-dismiss";
@@ -588,6 +839,15 @@
     );
     head.appendChild(brand);
     head.appendChild(dismissBtn);
+
+    const echoSection = document.createElement("div");
+    echoSection.className = "linger-shop-echo linger-shop-echo--loading";
+    const echoLoading = document.createElement("p");
+    echoLoading.className = "linger-shop-echo-loading";
+    echoLoading.textContent =
+      "Looking at this product and your Pinterest saves\u2026";
+    echoSection.appendChild(echoLoading);
+    root._lingerEchoSlot = echoSection;
 
     const impact = document.createElement("div");
     impact.className = "linger-shop-impact";
@@ -626,41 +886,21 @@
     actions.appendChild(btnWant);
     actions.appendChild(btnDepop);
 
+    const chartTitle = document.createElement("div");
+    chartTitle.className = "linger-shop-chart-title";
+    chartTitle.textContent = "Your Pinterest save mix";
+
+    const chart = document.createElement("div");
+    chart.className = "linger-shop-chart";
+    renderBarChart(chart, percentages);
+
     card.appendChild(head);
+    card.appendChild(echoSection);
     card.appendChild(impact);
     card.appendChild(thrift);
+    card.appendChild(chartTitle);
+    card.appendChild(chart);
     card.appendChild(footnote);
-
-    if (showTasteMismatch) {
-      const topTaste = getTopTasteRegion(percentages);
-      const nudgeFinal = buildNudge(productRegion, topTaste);
-
-      const div = document.createElement("div");
-      div.className = "linger-shop-divider";
-
-      const insight = document.createElement("p");
-      insight.className = "linger-shop-insight";
-      insight.textContent = buildInsight(percentages, productRegion);
-
-      const nudgeEl = document.createElement("p");
-      nudgeEl.className = "linger-shop-nudge";
-      nudgeEl.textContent = nudgeFinal;
-
-      const chartTitle = document.createElement("div");
-      chartTitle.className = "linger-shop-chart-title";
-      chartTitle.textContent = "Your Pinterest save mix";
-
-      const chart = document.createElement("div");
-      chart.className = "linger-shop-chart";
-      renderBarChart(chart, percentages);
-
-      card.appendChild(div);
-      card.appendChild(insight);
-      card.appendChild(nudgeEl);
-      card.appendChild(chartTitle);
-      card.appendChild(chart);
-    }
-
     card.appendChild(actions);
     root.appendChild(card);
     document.documentElement.appendChild(root);
@@ -670,6 +910,8 @@
         card.classList.add("linger-shop-card--in");
       });
     });
+
+    return root;
   }
 
   function boot() {
@@ -678,24 +920,21 @@
       if (/pinterest\.com$/i.test(location.hostname.replace(/^www\./, "")))
         return;
 
-      const productRegion = detectProductRegion();
+      let productRegion = detectProductRegion();
+      if (!productRegion && hasLikelyProductPage()) productRegion = "tops";
       if (!productRegion) return;
 
       chrome.storage.local.get([STORAGE_LOGS], (data) => {
         try {
           if (chrome.runtime && chrome.runtime.lastError) return;
           const logs = Array.isArray(data[STORAGE_LOGS]) ? data[STORAGE_LOGS] : [];
-          const { percentages, total } = getTasteProfile(logs);
-          const p = percentages[productRegion] ?? 0;
-          const showTasteMismatch =
-            logs.length >= MIN_LOGS &&
-            total > 0 &&
-            p < THRESHOLD_PCT;
+          const { percentages } = getTasteProfile(logs);
 
           window.setTimeout(() => {
             try {
               if (sessionStorage.getItem(SESSION_DISMISSED) === "1") return;
-              showIntervention(productRegion, percentages, showTasteMismatch);
+              const root = showIntervention(productRegion, percentages);
+              void runShopEchoPipeline(root, logs);
             } catch (_) {
               /* silent */
             }

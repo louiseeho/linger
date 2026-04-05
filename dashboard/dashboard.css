@@ -3,10 +3,6 @@
 }
 
 html {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  border-radius: 16px;
-  overflow: hidden;
   background: #faf8f5;
 }
 
@@ -16,17 +12,15 @@ html::-webkit-scrollbar {
 
 body {
   margin: 0;
+  width: 100%;
   min-width: 320px;
-  max-width: 380px;
+  min-height: 100vh;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   color: #2c2c2a;
   background: #faf8f5;
-  border-radius: 16px;
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
 body::-webkit-scrollbar {
@@ -34,7 +28,10 @@ body::-webkit-scrollbar {
 }
 
 .dash {
-  padding: 18px 16px 20px;
+  width: 100%;
+  max-width: none;
+  padding: 24px clamp(16px, 4vw, 48px) 32px;
+  box-sizing: border-box;
 }
 
 .dash-header {
@@ -42,15 +39,16 @@ body::-webkit-scrollbar {
 }
 
 .dash-title {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.5rem;
-  font-weight: 600;
   margin: 0;
-  letter-spacing: 0.02em;
+  line-height: 0;
 }
 
-.dash-title-dot {
-  color: #e24b4a;
+.dash-logo-img {
+  display: block;
+  width: auto;
+  max-width: min(220px, 85vw);
+  height: auto;
+  max-height: 56px;
 }
 
 .dash-tagline {
@@ -109,6 +107,24 @@ body::-webkit-scrollbar {
   color: #2c2c2a;
 }
 
+.dash-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px 48px;
+  margin-bottom: 8px;
+}
+
+@media (min-width: 880px) {
+  .dash-charts-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.dash-chart-col {
+  min-width: 0;
+}
+
 .dash-chart-title {
   font-size: 0.72rem;
   font-weight: 600;
@@ -122,13 +138,13 @@ body::-webkit-scrollbar {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .dash-bar-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(64px, 1fr) 32px;
-  gap: 8px;
+  grid-template-columns: minmax(100px, min(26vw, 240px)) minmax(0, 1fr) 2.5rem;
+  gap: 10px 16px;
   align-items: center;
 }
 
@@ -162,9 +178,15 @@ body::-webkit-scrollbar {
 }
 
 .dash-recent {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .dash-recent {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  }
 }
 
 .dash-card {

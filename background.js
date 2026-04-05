@@ -149,6 +149,97 @@
     return { pieceMap, detailMap };
   }
 
+  async function shopProductEcho(
+    imageBase64,
+    mimeType,
+    productTitle,
+    productDescription,
+    numberedSnippets,
+    maxSnippetLine
+  ) {
+    const apiKey = await getApiKey();
+    if (!apiKey) throw new Error("Missing API key");
+
+    const title = String(productTitle || "")
+      .replace(/`/g, "'")
+      .slice(0, 500);
+    const desc = String(productDescription || "")
+      .replace(/`/g, "'")
+      .slice(0, 3500);
+    const blockRaw = String(numberedSnippets || "").trim();
+    const block = blockRaw
+      ? blockRaw.replace(/`/g, "'").slice(0, 14000)
+      : "(No saved Pinterest items yet.)";
+    const maxL = Math.max(0, parseInt(String(maxSnippetLine), 10) || 0);
+
+    const prompt =
+      "You compare a retail product to the user's past Pinterest saves (fashion taste notes).\n\n" +
+      "PRODUCT TITLE:\n" +
+      title +
+      "\n\nPRODUCT DESCRIPTION:\n" +
+      desc +
+      "\n\nNUMBERED SAVES (each line is N. … — valid N is 1 through " +
+      String(maxL) +
+      " only):\n" +
+      block +
+      "\n\nTASK:\n" +
+      "1) One concise sentence describing this product (use the image when provided, plus title/description).\n" +
+      "2) Up to 3 groups of saves that clearly relate to this product (category, colour, silhouette, fabric, or vibe). " +
+      "For each group return line_ids (only integers from the list above) and phrase — e.g. " +
+      "\"You've saved 3 tops in this colour\" or \"You've saved 1 bottom with a wide-leg silhouette\". " +
+      "The number in the sentence MUST equal line_ids.length.\n" +
+      "If there are no saves or no good match, return echoes: [].\n\n" +
+      "Return ONLY JSON: {\"product_blurb\":\"...\",\"echoes\":[{\"line_ids\":[1,2],\"phrase\":\"...\"}]}";
+
+    const parts = [{ text: prompt }];
+    if (imageBase64 && String(imageBase64).length > 80) {
+      parts.push({
+        inline_data: {
+          mime_type: mimeType || "image/jpeg",
+          data: imageBase64,
+        },
+      });
+    }
+
+    const parsed = await geminiGenerate(apiKey, parts, 2048);
+    let blurb =
+      typeof parsed.product_blurb === "string"
+        ? parsed.product_blurb.trim()
+        : "";
+    let echoes = Array.isArray(parsed.echoes) ? parsed.echoes : [];
+    const cleaned = [];
+    for (const e of echoes) {
+      if (cleaned.length >= 3) break;
+      let ids = Array.isArray(e.line_ids) ? e.line_ids : [];
+      ids = [
+        ...new Set(
+          ids
+            .map((x) => parseInt(String(x), 10))
+            .filter((n) => Number.isFinite(n) && n >= 1 && n <= maxL)
+        ),
+      ];
+      if (ids.length === 0) continue;
+      let phrase = typeof e.phrase === "string" ? e.phrase.trim() : "";
+      const n = ids.length;
+      if (!phrase) {
+        phrase =
+          "You've saved " +
+          n +
+          " Pinterest " +
+          (n === 1 ? "save" : "saves") +
+          " that relate to this piece.";
+      } else {
+        phrase = phrase.replace(
+          /you('ve|’ve) saved\s+\d+/i,
+          "You$1 saved " + n
+        );
+      }
+      cleaned.push({ line_ids: ids, phrase });
+    }
+
+    return { product_blurb: blurb, echoes: cleaned };
+  }
+
   async function listItems(imageBase64, mimeType) {
     const apiKey = await getApiKey();
     if (!apiKey) throw new Error("Missing API key");
@@ -261,6 +352,45 @@
         );
       return true;
     }
+    if (message?.type === "LINGER_GEMINI_SHOP_ECHO") {
+      shopProductEcho(
+        message.imageBase64,
+        message.mimeType,
+        message.productTitle,
+        message.productDescription,
+        message.numberedSnippets,
+        message.maxSnippetLine
+      )
+        .then((r) =>
+          sendResponse({
+            ok: true,
+            product_blurb: r.product_blurb,
+            echoes: r.echoes,
+          })
+        )
+        .catch((e) =>
+          sendResponse({ ok: false, error: e.message || String(e) })
+        );
+      return true;
+    }
     return false;
+  });
+
+  const DASHBOARD_PAGE = "dashboard/dashboard.html";
+
+  chrome.action.onClicked.addListener(async () => {
+    const dashboardUrl = chrome.runtime.getURL(DASHBOARD_PAGE);
+    try {
+      const existing = await chrome.tabs.query({ url: dashboardUrl });
+      if (existing.length > 0) {
+        const tab = existing[0];
+        await chrome.windows.update(tab.windowId, { focused: true });
+        await chrome.tabs.update(tab.id, { active: true });
+        return;
+      }
+      await chrome.tabs.create({ url: dashboardUrl });
+    } catch (e) {
+      console.error("Linger: could not open dashboard", e);
+    }
   });
 })();

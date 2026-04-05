@@ -620,8 +620,18 @@
 
     const header = document.createElement("div");
     header.className = "linger-header";
-    header.innerHTML =
-      '<div class="linger-logo">Linger<span class="linger-logo-dot">.</span></div><div class="linger-sub">Select what you love.</div>';
+    const logoWrap = document.createElement("div");
+    logoWrap.className = "linger-logo";
+    const logoImg = document.createElement("img");
+    logoImg.className = "linger-logo-img";
+    logoImg.src = chrome.runtime.getURL("icons/full-logo.svg");
+    logoImg.alt = "linger";
+    logoWrap.appendChild(logoImg);
+    const sub = document.createElement("div");
+    sub.className = "linger-sub";
+    sub.textContent = "Select what you love.";
+    header.appendChild(logoWrap);
+    header.appendChild(sub);
 
     const panel = document.createElement("div");
     panel.className = "linger-ai-panel";
@@ -640,6 +650,8 @@
       attrSelected: [],
       attrChoices: [],
     };
+
+    let panelLottieAnim = null;
 
     const actions = document.createElement("div");
     actions.className = "linger-actions";
@@ -662,6 +674,14 @@
     }
 
     function clearPanel() {
+      if (panelLottieAnim) {
+        try {
+          panelLottieAnim.destroy();
+        } catch (_) {
+          /* ignore */
+        }
+        panelLottieAnim = null;
+      }
       panel.innerHTML = "";
     }
 
@@ -673,12 +693,32 @@
       cap.className = "linger-shimmer-caption";
       cap.textContent = caption;
       wrap.appendChild(cap);
-      for (let i = 0; i < 5; i++) {
+      const stage = document.createElement("div");
+      stage.className = "linger-brand-load";
+      stage.setAttribute("aria-hidden", "true");
+      const lottieHost = document.createElement("div");
+      lottieHost.className = "linger-lottie-host";
+      stage.appendChild(lottieHost);
+      wrap.appendChild(stage);
+      for (let i = 0; i < 3; i++) {
         const row = document.createElement("div");
         row.className = "linger-shimmer-row";
         wrap.appendChild(row);
       }
       panel.appendChild(wrap);
+      try {
+        const LottieApi = globalThis.lottie;
+        if (LottieApi && typeof LottieApi.loadAnimation === "function") {
+          panelLottieAnim = LottieApi.loadAnimation({
+            container: lottieHost,
+            renderer: "svg",
+            loop: true,
+            path: chrome.runtime.getURL("icons/linger.json"),
+          });
+        }
+      } catch (_) {
+        /* ignore */
+      }
     }
 
     function showError(msg, showBackToGrid) {

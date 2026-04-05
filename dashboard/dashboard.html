@@ -10,7 +10,13 @@
     <div class="dash">
       <header class="dash-header">
         <h1 class="dash-title">
-          Linger<span class="dash-title-dot">.</span>
+          <img
+            class="dash-logo-img"
+            src="../icons/full-logo.svg"
+            width="197"
+            height="66"
+            alt="linger"
+          />
         </h1>
         <p class="dash-tagline">Your Pinterest taste profile.</p>
       </header>
@@ -23,10 +29,16 @@
           <span class="dash-stat-label">Total saves logged</span>
           <span id="dash-total" class="dash-stat-value">0</span>
         </div>
-        <h3 class="dash-chart-title">Pieces you flag</h3>
-        <div id="dash-regions-chart" class="dash-chart"></div>
-        <h3 class="dash-chart-title">Details you select</h3>
-        <div id="dash-tags-chart" class="dash-chart"></div>
+        <div class="dash-charts-grid">
+          <div class="dash-chart-col">
+            <h3 class="dash-chart-title">Pieces you flag</h3>
+            <div id="dash-regions-chart" class="dash-chart"></div>
+          </div>
+          <div class="dash-chart-col">
+            <h3 class="dash-chart-title">Details you select</h3>
+            <div id="dash-tags-chart" class="dash-chart"></div>
+          </div>
+        </div>
       </section>
 
       <section class="dash-section" aria-labelledby="recent-heading">

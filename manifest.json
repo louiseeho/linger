@@ -3,7 +3,17 @@
   "name": "Linger",
   "version": "1.0.0",
   "description": "A mindful saving tool for Pinterest — notice what you love as you save.",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/small-logo.svg",
+        "icons/full-logo.svg",
+        "icons/linger.json"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -34,7 +44,6 @@
     "https://generativelanguage.googleapis.com/*"
   ],
   "action": {
-    "default_popup": "dashboard/dashboard.html",
     "default_title": "Linger — taste profile",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -64,7 +73,7 @@
         "*://*.pinterest.com.au/*",
         "*://*.pinterest.ca/*"
       ],
-      "js": ["content/pinterest.js"],
+      "js": ["libs/lottie.min.js", "content/pinterest.js"],
       "css": ["content/overlay.css"],
       "run_at": "document_idle"
     },

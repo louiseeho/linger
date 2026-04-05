@@ -3,5 +3,8 @@
   "private": true,
   "scripts": {
     "sync-env": "node scripts/sync-env.js"
+  },
+  "devDependencies": {
+    "lottie-web": "^5.13.0"
   }
 }

@@ -49,23 +49,25 @@
 .linger-shop-brand {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
-.linger-shop-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #e24b4a;
+.linger-shop-logo-mark {
   flex-shrink: 0;
+  width: 17px;
+  height: 34px;
+  display: block;
+  object-fit: contain;
 }
 
-.linger-shop-name {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #2c2c2a;
-  letter-spacing: 0.02em;
+.linger-shop-logo-word {
+  display: block;
+  width: auto;
+  max-width: min(120px, 42vw);
+  height: auto;
+  max-height: 28px;
+  object-fit: contain;
 }
 
 .linger-shop-dismiss {
@@ -84,6 +86,80 @@
 .linger-shop-dismiss:hover {
   color: #2c2c2a;
   background: rgba(44, 44, 42, 0.06);
+}
+
+.linger-shop-echo {
+  margin: 0 0 12px;
+  padding: 10px;
+  background: rgba(138, 158, 140, 0.1);
+  border: 1px solid rgba(138, 158, 140, 0.35);
+  border-radius: 8px;
+}
+
+.linger-shop-echo--loading {
+  min-height: 2.5rem;
+}
+
+.linger-shop-echo-loading {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #5a5a58;
+}
+
+.linger-shop-echo-top {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.linger-shop-echo-thumb {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e8e4de;
+  background: #fff;
+}
+
+.linger-shop-echo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.linger-shop-echo-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.linger-shop-echo-blurb {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #2c2c2a;
+}
+
+.linger-shop-echo-list {
+  margin: 10px 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #3d3d3a;
+}
+
+.linger-shop-echo-list li {
+  margin: 0.35em 0;
+}
+
+.linger-shop-echo-empty,
+.linger-shop-echo-fallback {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #6b6b66;
 }
 
 .linger-shop-impact {
