@@ -1115,11 +1115,70 @@
     return root;
   }
 
+  /**
+   * True when at least two independent product-page signals match.
+   * Uses querySelector(All) only; short-circuits once two signals hit.
+   */
+  function isProductPage() {
+    let score = 0;
+
+    const path = location.pathname.toLowerCase();
+    if (
+      path.includes("product") ||
+      path.includes("item") ||
+      path.includes("pdp") ||
+      path.includes("/p/")
+    ) {
+      score++;
+      if (score >= 2) return true;
+    }
+
+    if (document.querySelector('meta[property="product:price:amount"]')) {
+      score++;
+      if (score >= 2) return true;
+    }
+
+    const ogType = document.querySelector('meta[property="og:type"]');
+    if (ogType) {
+      const c = (ogType.getAttribute("content") || "").trim().toLowerCase();
+      if (c === "product") {
+        score++;
+        if (score >= 2) return true;
+      }
+    }
+
+    const priceEls = document.querySelectorAll(
+      '[class*="price"], [class*="Price"], [id*="price"], [id*="Price"]'
+    );
+    for (let i = 0; i < priceEls.length; i++) {
+      if (/\d/.test(priceEls[i].textContent || "")) {
+        score++;
+        break;
+      }
+    }
+    if (score >= 2) return true;
+
+    const btns = document.querySelectorAll("button");
+    for (let i = 0; i < btns.length; i++) {
+      if (
+        /add to cart|add to bag|buy now|purchase/i.test(
+          btns[i].textContent || ""
+        )
+      ) {
+        score++;
+        break;
+      }
+    }
+
+    return score >= 2;
+  }
+
   function boot() {
     try {
-      if (sessionStorage.getItem(SESSION_DISMISSED) === "1") return;
+      if (!isProductPage()) return;
       if (/pinterest\.com$/i.test(location.hostname.replace(/^www\./, "")))
         return;
+      if (sessionStorage.getItem(SESSION_DISMISSED) === "1") return;
 
       let productRegion = detectProductRegion();
       if (!productRegion && hasLikelyProductPage()) productRegion = "tops";

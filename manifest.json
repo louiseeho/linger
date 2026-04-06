@@ -32,15 +32,7 @@
     "*://*.pinterest.com.au/*",
     "*://*.pinterest.ca/*",
     "https://i.pinimg.com/*",
-    "*://*.zara.com/*",
-    "*://*.hm.com/*",
-    "*://*.asos.com/*",
-    "*://*.uniqlo.com/*",
-    "*://*.mango.com/*",
-    "*://*.urbanoutfitters.com/*",
-    "*://*.nordstrom.com/*",
-    "*://*.net-a-porter.com/*",
-    "*://*.shopify.com/*",
+    "<all_urls>",
     "https://generativelanguage.googleapis.com/*"
   ],
   "action": {
@@ -78,17 +70,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": [
-        "*://*.zara.com/*",
-        "*://*.hm.com/*",
-        "*://*.asos.com/*",
-        "*://*.uniqlo.com/*",
-        "*://*.mango.com/*",
-        "*://*.urbanoutfitters.com/*",
-        "*://*.nordstrom.com/*",
-        "*://*.net-a-porter.com/*",
-        "*://*.shopify.com/*"
-      ],
+      "matches": ["*://*/*"],
       "js": ["content/shopping.js"],
       "css": ["content/shopping.css"],
       "run_at": "document_idle"
