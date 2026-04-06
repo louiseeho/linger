@@ -36,6 +36,7 @@
     0 2px 6px rgba(44, 44, 42, 0.08);
   padding: 14px;
   animation: linger-enter 0.38s ease-out;
+  box-sizing: border-box;
 }
 
 .linger-media {
@@ -72,6 +73,10 @@
   -ms-overflow-style: none;
 }
 
+.linger-content:has(.linger-logo--concealed) {
+  padding-top: 22px;
+}
+
 .linger-content::-webkit-scrollbar {
   display: none;
 }
@@ -99,10 +104,28 @@
 
 .linger-header {
   margin-bottom: 14px;
+  transition: margin-bottom 0.36s cubic-bezier(0.33, 1, 0.68, 1);
 }
 
+.linger-header:has(.linger-logo--concealed) {
+  margin-bottom: 8px;
+}
+
+/* Static logo hides while panel Lottie plays; collapses so subtitle + panel slide up */
 .linger-logo {
   line-height: 0;
+  max-height: 48px;
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    max-height 0.4s cubic-bezier(0.33, 1, 0.68, 1),
+    opacity 0.34s ease;
+}
+
+.linger-logo--concealed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .linger-logo-img {
@@ -113,7 +136,27 @@
   max-height: 40px;
 }
 
-/* Gemini loading: Lottie wordmark (icons/linger.json) */
+.linger-loading-hint {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #6b6b66;
+  max-width: 36em;
+}
+
+.linger-sub {
+  font-size: 0.8rem;
+  color: #6b6b66;
+  margin-top: 2px;
+  transition: transform 0.38s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.linger-logo--concealed ~ .linger-sub {
+  margin-top: 4px;
+  transform: translateY(0);
+}
+
+/* Gemini loading: Lottie wordmark in panel (icons/linger.json) */
 .linger-brand-load {
   position: relative;
   width: 100%;
@@ -139,10 +182,12 @@
   max-height: 96px;
 }
 
-.linger-sub {
-  font-size: 0.8rem;
-  color: #6b6b66;
-  margin-top: 2px;
+@media (prefers-reduced-motion: reduce) {
+  .linger-logo,
+  .linger-sub,
+  .linger-header {
+    transition-duration: 0.01ms;
+  }
 }
 
 .linger-step {

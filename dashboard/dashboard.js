@@ -28,6 +28,48 @@
 
   const el = (id) => document.getElementById(id);
 
+  let taxonomyLottieAnim = null;
+
+  function destroyTaxonomyLottie() {
+    if (taxonomyLottieAnim) {
+      try {
+        taxonomyLottieAnim.destroy();
+      } catch (_) {
+        /* ignore */
+      }
+      taxonomyLottieAnim = null;
+    }
+  }
+
+  function showTaxonomyLoading() {
+    const wrap = el("dash-taxonomy-loading");
+    const host = el("dash-taxonomy-lottie");
+    if (!wrap || !host) return;
+    el("dash-taxonomy-status").textContent = "";
+    destroyTaxonomyLottie();
+    host.innerHTML = "";
+    wrap.classList.remove("hidden");
+    try {
+      const LottieApi = globalThis.lottie;
+      if (LottieApi && typeof LottieApi.loadAnimation === "function") {
+        taxonomyLottieAnim = LottieApi.loadAnimation({
+          container: host,
+          renderer: "svg",
+          loop: true,
+          path: chrome.runtime.getURL("icons/linger.json"),
+        });
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function hideTaxonomyLoading() {
+    destroyTaxonomyLottie();
+    const wrap = el("dash-taxonomy-loading");
+    if (wrap) wrap.classList.add("hidden");
+  }
+
   function storageGet(keys) {
     return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
   }
@@ -416,6 +458,7 @@
       summaryEl.textContent =
         "Log saves on Pinterest to see patterns in what pulls your attention.";
       taxStatus.textContent = "";
+      hideTaxonomyLoading();
       renderBarsOrdered(
         el("dash-regions-chart"),
         {},
@@ -448,8 +491,13 @@
     );
 
     if (missP.length > 0 || missD.length > 0) {
-      taxStatus.textContent = "Grouping labels with Gemini\u2026";
-      const resp = await sendTaxonomy(missP, missD);
+      showTaxonomyLoading();
+      let resp;
+      try {
+        resp = await sendTaxonomy(missP, missD);
+      } finally {
+        hideTaxonomyLoading();
+      }
       if (resp.ok && resp.pieceMap && resp.detailMap) {
         Object.assign(cache.pieces, resp.pieceMap);
         Object.assign(cache.details, resp.detailMap);

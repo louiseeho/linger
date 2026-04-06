@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Linger",
   "version": "1.0.0",
-  "description": "A mindful saving tool for Pinterest — notice what you love as you save.",
+  "description": "Pinterest tells you what you like. Linger tells you why. Shop slower, more intentionally, and truer to your taste.",
   "permissions": ["storage", "activeTab", "scripting", "tabs"],
   "web_accessible_resources": [
     {

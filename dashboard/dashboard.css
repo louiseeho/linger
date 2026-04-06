@@ -75,6 +75,37 @@ body::-webkit-scrollbar {
   color: #3d3d3a;
 }
 
+.dash-taxonomy-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.dash-taxonomy-lottie {
+  width: min(280px, 100%);
+  max-width: 320px;
+  min-height: 56px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dash-taxonomy-lottie svg {
+  width: 100% !important;
+  height: auto !important;
+  max-height: 72px;
+}
+
+.dash-taxonomy-loading-text {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #6b6b66;
+  text-align: center;
+}
+
 .dash-taxonomy-status {
   margin: 0 0 14px;
   font-size: 0.72rem;

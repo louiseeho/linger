@@ -24,6 +24,18 @@
       <section class="dash-section" aria-labelledby="taste-heading">
         <h2 id="taste-heading" class="dash-section-title">Taste Profile</h2>
         <p id="dash-summary" class="dash-summary"></p>
+        <div
+          id="dash-taxonomy-loading"
+          class="dash-taxonomy-loading hidden"
+          aria-live="polite"
+        >
+          <div
+            id="dash-taxonomy-lottie"
+            class="dash-taxonomy-lottie"
+            aria-hidden="true"
+          ></div>
+          <p class="dash-taxonomy-loading-text">Grouping labels…</p>
+        </div>
         <p id="dash-taxonomy-status" class="dash-taxonomy-status" aria-live="polite"></p>
         <div class="dash-stat">
           <span class="dash-stat-label">Total saves logged</span>
@@ -66,6 +78,7 @@
         </div>
       </footer>
     </div>
+    <script src="../libs/lottie.min.js"></script>
     <script src="dashboard.js"></script>
   </body>
 </html>

@@ -627,10 +627,14 @@
     logoImg.src = chrome.runtime.getURL("icons/full-logo.svg");
     logoImg.alt = "linger";
     logoWrap.appendChild(logoImg);
+    const loadingHint = document.createElement("p");
+    loadingHint.className = "linger-loading-hint linger-hidden";
+    loadingHint.setAttribute("aria-live", "polite");
     const sub = document.createElement("div");
     sub.className = "linger-sub";
     sub.textContent = "Select what you love.";
     header.appendChild(logoWrap);
+    header.appendChild(loadingHint);
     header.appendChild(sub);
 
     const panel = document.createElement("div");
@@ -652,6 +656,80 @@
     };
 
     let panelLottieAnim = null;
+    let cardHeightTransitionCleanup = null;
+    let cardMeasureTimeoutId = 0;
+
+    const reduceMotion =
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function cancelCardHeightTransition() {
+      if (cardMeasureTimeoutId) {
+        clearTimeout(cardMeasureTimeoutId);
+        cardMeasureTimeoutId = 0;
+      }
+      if (cardHeightTransitionCleanup) {
+        cardHeightTransitionCleanup();
+        cardHeightTransitionCleanup = null;
+      }
+    }
+
+    function beginCardHeightLock() {
+      cancelCardHeightTransition();
+      if (reduceMotion) return;
+      const h = card.getBoundingClientRect().height;
+      card.style.height = `${Math.round(h)}px`;
+      card.style.overflow = "hidden";
+    }
+
+    function endCardHeightTransition(revealLogo) {
+      cancelCardHeightTransition();
+      if (revealLogo) logoWrap.classList.remove("linger-logo--concealed");
+      if (reduceMotion) {
+        card.style.height = "";
+        card.style.overflow = "";
+        return;
+      }
+      const runMeasure = () => {
+        const end = Math.ceil(card.scrollHeight);
+        const start = Math.round(card.getBoundingClientRect().height);
+        if (Math.abs(end - start) < 2) {
+          card.style.height = "";
+          card.style.overflow = "";
+          return;
+        }
+        card.style.transition =
+          "height 0.42s cubic-bezier(0.33, 1, 0.68, 1)";
+        card.style.height = `${end}px`;
+        const onEnd = (e) => {
+          if (e.propertyName !== "height") return;
+          card.removeEventListener("transitionend", onEnd);
+          card.style.height = "";
+          card.style.overflow = "";
+          card.style.transition = "";
+          cardHeightTransitionCleanup = null;
+        };
+        cardHeightTransitionCleanup = () => {
+          card.removeEventListener("transitionend", onEnd);
+          card.style.height = "";
+          card.style.overflow = "";
+          card.style.transition = "";
+        };
+        card.addEventListener("transitionend", onEnd);
+      };
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (revealLogo) {
+            cardMeasureTimeoutId = window.setTimeout(() => {
+              cardMeasureTimeoutId = 0;
+              runMeasure();
+            }, 90);
+          } else {
+            runMeasure();
+          }
+        });
+      });
+    }
 
     const actions = document.createElement("div");
     actions.className = "linger-actions";
@@ -683,9 +761,12 @@
         panelLottieAnim = null;
       }
       panel.innerHTML = "";
+      loadingHint.textContent = "";
+      loadingHint.classList.add("linger-hidden");
     }
 
-    function showShimmer(caption) {
+    function showShimmer(caption, opts) {
+      beginCardHeightLock();
       clearPanel();
       const wrap = document.createElement("div");
       wrap.className = "linger-shimmer-wrap";
@@ -719,9 +800,18 @@
       } catch (_) {
         /* ignore */
       }
+      if (panelLottieAnim) logoWrap.classList.add("linger-logo--concealed");
+      const hint =
+        opts && typeof opts.headerHint === "string" ? opts.headerHint.trim() : "";
+      if (hint && panelLottieAnim) {
+        loadingHint.textContent = hint;
+        loadingHint.classList.remove("linger-hidden");
+      }
+      endCardHeightTransition(false);
     }
 
     function showError(msg, showBackToGrid) {
+      beginCardHeightLock();
       clearPanel();
       const invalidated = isContextInvalidatedMessage(msg);
       const p = document.createElement("p");
@@ -744,6 +834,7 @@
         back.addEventListener("click", () => renderItemGrid());
         panel.appendChild(back);
       }
+      endCardHeightTransition(true);
     }
 
     function stagedHas(label) {
@@ -751,6 +842,7 @@
     }
 
     function renderItemGrid() {
+      beginCardHeightLock();
       clearPanel();
       if (state.staged.length > 0) {
         const sum = document.createElement("div");
@@ -833,6 +925,7 @@
       customWrap.appendChild(customErr);
       customWrap.appendChild(customBtn);
       panel.appendChild(customWrap);
+      endCardHeightTransition(true);
     }
 
     function filterAttrPills(attrs) {
@@ -852,6 +945,7 @@
     }
 
     function renderAttributeView() {
+      beginCardHeightLock();
       clearPanel();
       const back = document.createElement("button");
       back.type = "button";
@@ -942,6 +1036,7 @@
       panel.appendChild(ta);
       panel.appendChild(hint);
       panel.appendChild(done);
+      endCardHeightTransition(true);
     }
 
     function attrCacheKey(label, userFocus) {
@@ -993,7 +1088,10 @@
     }
 
     async function runListItems() {
-      showShimmer("Scanning the pin\u2026");
+      showShimmer("Noticing each piece in this outfit\u2026", {
+        headerHint:
+          "Picking out each piece in this look so you can say what you love.",
+      });
       const hi = await captureImageAsBase64WithMax(overlayPreviewUrl, 896);
       if (!hi) {
         showError("Could not read this image.", false);
