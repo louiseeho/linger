@@ -818,16 +818,10 @@
     head.className = "linger-shop-head";
     const brand = document.createElement("div");
     brand.className = "linger-shop-brand";
-    const mark = document.createElement("img");
-    mark.className = "linger-shop-logo-mark";
-    mark.src = chrome.runtime.getURL("icons/small-logo.svg");
-    mark.alt = "";
-    mark.setAttribute("aria-hidden", "true");
     const word = document.createElement("img");
     word.className = "linger-shop-logo-word";
     word.src = chrome.runtime.getURL("icons/full-logo.svg");
     word.alt = "linger";
-    brand.appendChild(mark);
     brand.appendChild(word);
     const dismissBtn = document.createElement("button");
     dismissBtn.type = "button";
@@ -839,6 +833,15 @@
     );
     head.appendChild(brand);
     head.appendChild(dismissBtn);
+
+    const viewsShell = document.createElement("div");
+    viewsShell.className = "linger-shop-views";
+    const track = document.createElement("div");
+    track.className = "linger-shop-views-track";
+
+    const viewMain = document.createElement("div");
+    viewMain.className = "linger-shop-view";
+    viewMain.setAttribute("aria-hidden", "false");
 
     const echoSection = document.createElement("div");
     echoSection.className = "linger-shop-echo linger-shop-echo--loading";
@@ -857,6 +860,14 @@
     thrift.className = "linger-shop-savings";
     appendThriftSavings(thrift, productRegion);
 
+    const chartTitle = document.createElement("div");
+    chartTitle.className = "linger-shop-chart-title";
+    chartTitle.textContent = "Your Pinterest save mix";
+
+    const chart = document.createElement("div");
+    chart.className = "linger-shop-chart";
+    renderBarChart(chart, percentages);
+
     const footnote = document.createElement("p");
     footnote.className = "linger-shop-footnote";
     footnote.textContent =
@@ -873,35 +884,142 @@
       dismissCard(root, productRegion, true)
     );
 
-    const depopUrl =
-      "https://www.depop.com/search/?q=" +
-      encodeURIComponent(productSearchQuery());
-    const btnDepop = document.createElement("a");
-    btnDepop.className = "linger-shop-btn linger-shop-btn--secondary";
-    btnDepop.href = depopUrl;
-    btnDepop.target = "_blank";
-    btnDepop.rel = "noopener noreferrer";
-    btnDepop.textContent = "Find it secondhand →";
+    const btnSecondhand = document.createElement("button");
+    btnSecondhand.type = "button";
+    btnSecondhand.className = "linger-shop-btn linger-shop-btn--secondary";
+    btnSecondhand.textContent = "Find it secondhand →";
 
     actions.appendChild(btnWant);
-    actions.appendChild(btnDepop);
+    actions.appendChild(btnSecondhand);
 
-    const chartTitle = document.createElement("div");
-    chartTitle.className = "linger-shop-chart-title";
-    chartTitle.textContent = "Your Pinterest save mix";
+    viewMain.appendChild(echoSection);
+    viewMain.appendChild(impact);
+    viewMain.appendChild(thrift);
+    viewMain.appendChild(chartTitle);
+    viewMain.appendChild(chart);
+    viewMain.appendChild(footnote);
+    viewMain.appendChild(actions);
 
-    const chart = document.createElement("div");
-    chart.className = "linger-shop-chart";
-    renderBarChart(chart, percentages);
+    const searchQ = encodeURIComponent(productSearchQuery());
+
+    const viewSecond = document.createElement("div");
+    viewSecond.className = "linger-shop-view linger-shop-view--second";
+    viewSecond.setAttribute("aria-hidden", "true");
+
+    const backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.className = "linger-shop-back";
+    backBtn.textContent = "\u2190 Back";
+
+    const secondTitle = document.createElement("h2");
+    secondTitle.className = "linger-shop-second-title";
+    secondTitle.textContent = "Find it secondhand";
+
+    const secondIntro = document.createElement("p");
+    secondIntro.className = "linger-shop-second-intro";
+    secondIntro.textContent =
+      "Open a resale search in a new tab, or look for thrift nearby on Maps.";
+
+    function makeOutboundLink(label, href) {
+      const a = document.createElement("a");
+      a.className = "linger-shop-btn linger-shop-btn--secondary";
+      a.href = href;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = label;
+      return a;
+    }
+
+    const secOnline = document.createElement("div");
+    secOnline.className = "linger-shop-second-section";
+    const labOnline = document.createElement("div");
+    labOnline.className = "linger-shop-second-section-label";
+    labOnline.textContent = "Marketplaces & apps";
+    const onlineLinks = document.createElement("div");
+    onlineLinks.className = "linger-shop-second-link-stack";
+    onlineLinks.appendChild(
+      makeOutboundLink(
+        "Facebook Marketplace",
+        "https://www.facebook.com/marketplace/search/?query=" + searchQ
+      )
+    );
+    onlineLinks.appendChild(
+      makeOutboundLink(
+        "Depop",
+        "https://www.depop.com/search/?q=" + searchQ
+      )
+    );
+    onlineLinks.appendChild(
+      makeOutboundLink(
+        "eBay",
+        "https://www.ebay.com/sch/i.html?_nkw=" + searchQ
+      )
+    );
+    onlineLinks.appendChild(
+      makeOutboundLink(
+        "Vinted",
+        "https://www.vinted.com/catalog?search_text=" + searchQ
+      )
+    );
+    onlineLinks.appendChild(
+      makeOutboundLink(
+        "Poshmark",
+        "https://poshmark.com/search?query=" + searchQ
+      )
+    );
+    secOnline.appendChild(labOnline);
+    secOnline.appendChild(onlineLinks);
+
+    const secLocal = document.createElement("div");
+    secLocal.className = "linger-shop-second-section";
+    const labLocal = document.createElement("div");
+    labLocal.className = "linger-shop-second-section-label";
+    labLocal.textContent = "In person";
+    const localLinks = document.createElement("div");
+    localLinks.className = "linger-shop-second-link-stack";
+    localLinks.appendChild(
+      makeOutboundLink(
+        "Thrift stores near me (Google Maps)",
+        "https://www.google.com/maps/search/?api=1&query=" +
+          encodeURIComponent("thrift stores near me")
+      )
+    );
+    secLocal.appendChild(labLocal);
+    secLocal.appendChild(localLinks);
+
+    viewSecond.appendChild(backBtn);
+    viewSecond.appendChild(secondTitle);
+    viewSecond.appendChild(secondIntro);
+    viewSecond.appendChild(secOnline);
+    viewSecond.appendChild(secLocal);
+
+    function goSecondhandPage(showSecond) {
+      if (showSecond) {
+        track.classList.add("linger-shop-views-track--second");
+        viewMain.setAttribute("aria-hidden", "true");
+        viewSecond.setAttribute("aria-hidden", "false");
+        if ("inert" in viewMain) viewMain.inert = true;
+        if ("inert" in viewSecond) viewSecond.inert = false;
+      } else {
+        track.classList.remove("linger-shop-views-track--second");
+        viewMain.setAttribute("aria-hidden", "false");
+        viewSecond.setAttribute("aria-hidden", "true");
+        if ("inert" in viewMain) viewMain.inert = false;
+        if ("inert" in viewSecond) viewSecond.inert = true;
+      }
+    }
+
+    if ("inert" in viewSecond) viewSecond.inert = true;
+
+    btnSecondhand.addEventListener("click", () => goSecondhandPage(true));
+    backBtn.addEventListener("click", () => goSecondhandPage(false));
+
+    track.appendChild(viewMain);
+    track.appendChild(viewSecond);
+    viewsShell.appendChild(track);
 
     card.appendChild(head);
-    card.appendChild(echoSection);
-    card.appendChild(impact);
-    card.appendChild(thrift);
-    card.appendChild(chartTitle);
-    card.appendChild(chart);
-    card.appendChild(footnote);
-    card.appendChild(actions);
+    card.appendChild(viewsShell);
     root.appendChild(card);
     document.documentElement.appendChild(root);
 

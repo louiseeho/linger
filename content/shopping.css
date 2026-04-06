@@ -20,7 +20,7 @@
   pointer-events: auto;
   margin-right: 12px;
   margin-left: 8px;
-  padding: 14px 14px 16px;
+  padding: 19px 14px 16px;
   max-height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
@@ -58,24 +58,15 @@
 .linger-shop-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
   min-width: 0;
-}
-
-.linger-shop-logo-mark {
-  flex-shrink: 0;
-  width: 17px;
-  height: 34px;
-  display: block;
-  object-fit: contain;
 }
 
 .linger-shop-logo-word {
   display: block;
   width: auto;
-  max-width: min(120px, 42vw);
+  max-width: min(200px, 78%);
   height: auto;
-  max-height: 28px;
+  max-height: 40px;
   object-fit: contain;
 }
 
@@ -95,6 +86,96 @@
 .linger-shop-dismiss:hover {
   color: #2c2c2a;
   background: rgba(44, 44, 42, 0.06);
+}
+
+.linger-shop-views {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.linger-shop-views-track {
+  display: flex;
+  flex-direction: row;
+  width: 200%;
+  align-items: flex-start;
+  transition: transform 0.38s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+.linger-shop-views-track.linger-shop-views-track--second {
+  transform: translateX(-50%);
+}
+
+.linger-shop-view {
+  flex: 0 0 50%;
+  width: 50%;
+  max-width: 50%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.linger-shop-back {
+  display: block;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #8a9e8c;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.linger-shop-back:hover {
+  color: #5a6b5c;
+}
+
+.linger-shop-second-title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2c2c2a;
+  line-height: 1.25;
+}
+
+.linger-shop-second-intro {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #5a5a58;
+}
+
+.linger-shop-second-section {
+  margin-bottom: 14px;
+}
+
+.linger-shop-second-section:last-child {
+  margin-bottom: 0;
+}
+
+.linger-shop-second-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b6b66;
+  margin: 0 0 8px;
+}
+
+.linger-shop-second-link-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linger-shop-views-track {
+    transition-duration: 0.01ms;
+  }
 }
 
 .linger-shop-echo {
