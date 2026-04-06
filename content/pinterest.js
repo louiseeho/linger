@@ -239,6 +239,10 @@
     return /context invalidated|extension context/i.test(String(msg || ""));
   }
 
+  function isGeminiQuotaOrUsageMessage(msg) {
+    return /usage limit was reached|free tier cap/i.test(String(msg || ""));
+  }
+
   function storageLocalGet(keys) {
     return new Promise((resolve, reject) => {
       try {
@@ -812,7 +816,9 @@
       hint.className = "linger-ai-error-hint";
       hint.textContent = invalidated
         ? "Refresh this Pinterest page once (F5 or the reload button). After that, saves and AI will work again."
-        : "Add LINGER_GEMINI_API_KEY to a .env file in the extension folder, run npm run sync-env to create linger-config.local.json, then reload the extension. Get a key from Google AI Studio.";
+        : isGeminiQuotaOrUsageMessage(msg)
+          ? "That limit is set by Google\u2019s API, not Linger. You can retry after a short wait or check usage at Google AI Studio."
+          : "Add LINGER_GEMINI_API_KEY to a .env file in the extension folder, run npm run sync-env to create linger-config.local.json, then reload the extension. Get a key from Google AI Studio.";
       panel.appendChild(hint);
       if (showBackToGrid && state.itemListReady) {
         const back = document.createElement("button");

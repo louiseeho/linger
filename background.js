@@ -39,6 +39,44 @@
     return typeof k === "string" && k.trim().length > 0 ? k.trim() : null;
   }
 
+  function humanizeGeminiHttpError(status, rawBody) {
+    const raw = String(rawBody || "").trim();
+    let parsed = null;
+    if (raw.startsWith("{")) {
+      try {
+        parsed = JSON.parse(raw);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    const apiErr = parsed && parsed.error;
+    const code =
+      apiErr && typeof apiErr.code === "number" ? apiErr.code : status;
+    const apiMsg =
+      apiErr && typeof apiErr.message === "string" ? apiErr.message : "";
+    const haystack = (apiMsg + "\n" + raw).toLowerCase();
+
+    if (
+      code === 429 ||
+      apiErr?.status === "RESOURCE_EXHAUSTED" ||
+      /quota exceeded|exceeded your current quota|rate limit|resource_exhausted|generate_content_free_tier|generaterequestsperday/.test(
+        haystack
+      )
+    ) {
+      return (
+        "Gemini\u2019s usage limit was reached for the moment."
+      );
+    }
+
+    if (raw.length > 400) {
+      return (
+        "The AI request failed. Check your API key, network connection, and Google AI Studio if this keeps happening."
+      );
+    }
+
+    return raw || "HTTP " + String(status);
+  }
+
   async function geminiGenerate(apiKey, parts, maxOutputTokens) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
     const res = await fetch(url, {
@@ -55,7 +93,7 @@
     });
     const raw = await res.text();
     if (!res.ok) {
-      throw new Error(raw || res.statusText || String(res.status));
+      throw new Error(humanizeGeminiHttpError(res.status, raw));
     }
     const data = JSON.parse(raw);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
