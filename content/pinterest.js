@@ -2,7 +2,6 @@
   "use strict";
 
   const STORAGE_KEY = "linger_logs";
-  const SKIP_KEY = "linger_skip_streak";
   const DEBOUNCE_MS = 420;
   const SAVE_INTENT_MS = 3500;
   const POLL_MS = 220;
@@ -23,15 +22,6 @@
     if (!t) return t;
     const lower = t.toLowerCase();
     return lower.charAt(0).toUpperCase() + lower.slice(1);
-  }
-
-  function getSkipStreak() {
-    const n = parseInt(sessionStorage.getItem(SKIP_KEY) || "0", 10);
-    return Number.isFinite(n) ? n : 0;
-  }
-
-  function setSkipStreak(n) {
-    sessionStorage.setItem(SKIP_KEY, String(Math.max(0, n)));
   }
 
   function saveIntentRecent() {
@@ -541,13 +531,11 @@
   }
 
   function scheduleShowOverlay() {
-    if (getSkipStreak() >= 3) return;
     if (overlayEl) return;
 
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       debounceTimer = null;
-      if (getSkipStreak() >= 3) return;
       if (overlayEl) return;
       if (!looksLikeSaveConfirmation()) return;
       showOverlay();
@@ -1088,10 +1076,7 @@
     }
 
     async function runListItems() {
-      showShimmer("Noticing each piece in this outfit\u2026", {
-        headerHint:
-          "Picking out each piece in this look so you can say what you love.",
-      });
+      showShimmer("Scanning the pin\u2026");
       const hi = await captureImageAsBase64WithMax(overlayPreviewUrl, 896);
       if (!hi) {
         showError("Could not read this image.", false);
@@ -1123,7 +1108,6 @@
     }
 
     skip.addEventListener("click", () => {
-      setSkipStreak(getSkipStreak() + 1);
       removeOverlay();
     });
 
@@ -1150,7 +1134,6 @@
         }
         return;
       }
-      setSkipStreak(0);
       logBtn.disabled = true;
       showSuccessThenDismiss(card);
       void captureImageAsBase64(captureSrc).then((b64) => {
