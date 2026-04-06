@@ -255,6 +255,54 @@
     return out;
   }
 
+  function buildTagBreakdown(rawCountMap, labelToGroup, category) {
+    const out = [];
+    for (const tag of Object.keys(rawCountMap)) {
+      const g = labelToGroup[tag] || "Other";
+      if (g !== category) continue;
+      const n = rawCountMap[tag];
+      if (n > 0) out.push({ tag, count: n });
+    }
+    out.sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+    return out;
+  }
+
+  let dashTooltipId = 0;
+
+  function closeAllDashBarTooltips() {
+    document.querySelectorAll(".dash-bar-row--tip-open").forEach((r) => {
+      r.classList.remove("dash-bar-row--tip-open");
+      r.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  let dashBarTooltipDismissBound = false;
+
+  function bindDashBarTooltipDismissals() {
+    if (dashBarTooltipDismissBound) return;
+    dashBarTooltipDismissBound = true;
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".dash-bar-row--breakdown")) return;
+      closeAllDashBarTooltips();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      closeAllDashBarTooltips();
+    });
+  }
+
+  function toggleDashBarRowTip(row, container) {
+    const wasOpen = row.classList.contains("dash-bar-row--tip-open");
+    container.querySelectorAll(".dash-bar-row--tip-open").forEach((r) => {
+      r.classList.remove("dash-bar-row--tip-open");
+      r.setAttribute("aria-expanded", "false");
+    });
+    if (!wasOpen) {
+      row.classList.add("dash-bar-row--tip-open");
+      row.setAttribute("aria-expanded", "true");
+    }
+  }
+
   function topEntry(map) {
     let best = null;
     let bestN = -1;
@@ -313,7 +361,7 @@
     return "Keep logging on Pinterest to sharpen your profile.";
   }
 
-  function renderBarsOrdered(container, map, order, emptyMsg) {
+  function renderBarsOrdered(container, map, order, emptyMsg, groupingContext) {
     container.innerHTML = "";
     const ordered = order.filter((k) => (map[k] || 0) > 0);
     const extras = Object.keys(map).filter(
@@ -328,6 +376,8 @@
       container.appendChild(p);
       return;
     }
+    const rawCountMap = groupingContext && groupingContext.rawCountMap;
+    const labelToGroup = groupingContext && groupingContext.labelToGroup;
     const max = Math.max(...keys.map((k) => map[k]), 1);
     const sorted = keys.sort((a, b) => map[b] - map[a] || a.localeCompare(b));
     for (const label of sorted) {
@@ -350,6 +400,49 @@
       row.appendChild(left);
       row.appendChild(mid);
       row.appendChild(count);
+      if (rawCountMap && labelToGroup) {
+        const breakdown = buildTagBreakdown(rawCountMap, labelToGroup, label);
+        if (breakdown.length > 0) {
+          row.classList.add("dash-bar-row--breakdown");
+          row.tabIndex = 0;
+          row.setAttribute("role", "button");
+          row.setAttribute("aria-expanded", "false");
+          row.setAttribute(
+            "aria-label",
+            label + ", " + n + " — open list of logged tags"
+          );
+          const tipId = "dash-bar-tip-" + (dashTooltipId += 1);
+          row.setAttribute("aria-describedby", tipId);
+          const tip = document.createElement("div");
+          tip.id = tipId;
+          tip.className = "dash-bar-tooltip";
+          tip.setAttribute("role", "tooltip");
+          const ul = document.createElement("ul");
+          ul.className = "dash-bar-tooltip-list";
+          for (const x of breakdown) {
+            const li = document.createElement("li");
+            const nameSpan = document.createElement("span");
+            nameSpan.className = "dash-bar-tooltip-tag";
+            nameSpan.textContent = x.tag;
+            li.appendChild(nameSpan);
+            li.appendChild(document.createTextNode(" \u00B7 " + x.count));
+            ul.appendChild(li);
+          }
+          tip.appendChild(ul);
+          row.appendChild(tip);
+          row.addEventListener("click", (ev) => {
+            if (ev.target.closest(".dash-bar-tooltip")) return;
+            ev.stopPropagation();
+            toggleDashBarRowTip(row, container);
+          });
+          row.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" || ev.key === " ") {
+              ev.preventDefault();
+              toggleDashBarRowTip(row, container);
+            }
+          });
+        }
+      }
       container.appendChild(row);
     }
   }
@@ -440,6 +533,7 @@
   }
 
   async function render() {
+    bindDashBarTooltipDismissals();
     const data = await storageGet([STORAGE_KEY, TAXONOMY_STORAGE]);
     const raw = data[STORAGE_KEY];
     const logs = Array.isArray(raw) ? raw : [];
@@ -548,13 +642,15 @@
       el("dash-regions-chart"),
       pieceGrouped,
       PIECE_ORDER,
-      "No pieces logged yet."
+      "No pieces logged yet.",
+      { rawCountMap: pieceRaw, labelToGroup: cache.pieces }
     );
     renderBarsOrdered(
       el("dash-tags-chart"),
       detailGrouped,
       DETAIL_ORDER,
-      "No details logged yet."
+      "No details logged yet.",
+      { rawCountMap: detailRaw, labelToGroup: cache.details }
     );
 
     const recent = el("dash-recent");
