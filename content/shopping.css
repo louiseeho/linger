@@ -462,6 +462,33 @@
   gap: 8px;
 }
 
+.linger-shop-secondhand-slot {
+  margin: 0 0 14px;
+}
+
+.linger-shop-want-friction {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid #e8e4de;
+}
+
+.linger-shop-want-step[hidden] {
+  display: none !important;
+}
+
+.linger-shop-want-confirm-msg {
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: #5a5a56;
+  margin: 0 0 10px;
+}
+
+.linger-shop-want-confirm-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .linger-shop-btn {
   width: 100%;
   padding: 10px 12px;
@@ -493,4 +520,23 @@
 
 .linger-shop-btn--secondary:hover {
   background: rgba(138, 158, 140, 0.1);
+}
+
+.linger-shop-btn--cta {
+  background: #c94a48;
+  color: #faf8f5;
+  font-weight: 700;
+  font-size: 0.82rem;
+  border: 1px solid #c94a48;
+}
+
+.linger-shop-btn--cta:hover {
+  background: #b03e3c;
+  border-color: #b03e3c;
+  opacity: 1;
+}
+
+.linger-shop-btn--demoted {
+  font-weight: 500;
+  font-size: 0.74rem;
 }

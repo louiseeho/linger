@@ -873,32 +873,89 @@
     footnote.textContent =
       "Ballpark figures only — not carbon accounting or financial advice. Thrift prices vary by city, store, and luck.";
 
-    const actions = document.createElement("div");
-    actions.className = "linger-shop-actions";
-
-    const btnWant = document.createElement("button");
-    btnWant.type = "button";
-    btnWant.className = "linger-shop-btn linger-shop-btn--primary";
-    btnWant.textContent = "I still want it";
-    btnWant.addEventListener("click", () =>
-      dismissCard(root, productRegion, true)
-    );
-
+    const secondhandSlot = document.createElement("div");
+    secondhandSlot.className = "linger-shop-secondhand-slot";
     const btnSecondhand = document.createElement("button");
     btnSecondhand.type = "button";
-    btnSecondhand.className = "linger-shop-btn linger-shop-btn--secondary";
+    btnSecondhand.className = "linger-shop-btn linger-shop-btn--cta";
     btnSecondhand.textContent = "Find it secondhand →";
+    secondhandSlot.appendChild(btnSecondhand);
 
-    actions.appendChild(btnWant);
-    actions.appendChild(btnSecondhand);
+    const wantFriction = document.createElement("div");
+    wantFriction.className = "linger-shop-want-friction";
+
+    const wantStepInitial = document.createElement("div");
+    wantStepInitial.className = "linger-shop-want-step";
+    const btnWant = document.createElement("button");
+    btnWant.type = "button";
+    btnWant.className =
+      "linger-shop-btn linger-shop-btn--secondary linger-shop-btn--demoted";
+    btnWant.textContent = "I still want it";
+    wantStepInitial.appendChild(btnWant);
+
+    const wantStepConfirm = document.createElement("div");
+    wantStepConfirm.className = "linger-shop-want-step";
+    wantStepConfirm.hidden = true;
+    const confirmMsg = document.createElement("p");
+    confirmMsg.className = "linger-shop-want-confirm-msg";
+    confirmMsg.textContent =
+      "Are you sure? Secondhand and thrift usually save money and are gentler on the environment.";
+    const confirmActions = document.createElement("div");
+    confirmActions.className = "linger-shop-want-confirm-actions";
+    const btnConfirmBack = document.createElement("button");
+    btnConfirmBack.type = "button";
+    btnConfirmBack.className =
+      "linger-shop-btn linger-shop-btn--secondary linger-shop-btn--demoted";
+    btnConfirmBack.textContent = "Go back";
+    const btnConfirmDismiss = document.createElement("button");
+    btnConfirmDismiss.type = "button";
+    btnConfirmDismiss.className =
+      "linger-shop-btn linger-shop-btn--secondary linger-shop-btn--demoted";
+    btnConfirmDismiss.textContent = "Yes, dismiss anyway";
+    confirmActions.appendChild(btnConfirmBack);
+    confirmActions.appendChild(btnConfirmDismiss);
+    wantStepConfirm.appendChild(confirmMsg);
+    wantStepConfirm.appendChild(confirmActions);
+
+    wantFriction.appendChild(wantStepInitial);
+    wantFriction.appendChild(wantStepConfirm);
+
+    function bumpShopLayoutAfterWantStepChange() {
+      requestAnimationFrame(() => {
+        syncShopViewsHeight();
+        requestAnimationFrame(() => {
+          syncShopViewsHeight();
+          wantStepConfirm.hidden
+            ? wantFriction.scrollIntoView({ block: "end", behavior: "smooth" })
+            : wantStepConfirm.scrollIntoView({ block: "end", behavior: "smooth" });
+        });
+      });
+    }
+
+    btnWant.addEventListener("click", () => {
+      wantStepInitial.hidden = true;
+      wantStepConfirm.hidden = false;
+      bumpShopLayoutAfterWantStepChange();
+    });
+
+    btnConfirmBack.addEventListener("click", () => {
+      wantStepConfirm.hidden = true;
+      wantStepInitial.hidden = false;
+      bumpShopLayoutAfterWantStepChange();
+    });
+
+    btnConfirmDismiss.addEventListener("click", () =>
+      dismissCard(root, productRegion, true)
+    );
 
     viewMain.appendChild(echoSection);
     viewMain.appendChild(impact);
     viewMain.appendChild(thrift);
+    viewMain.appendChild(secondhandSlot);
     viewMain.appendChild(chartTitle);
     viewMain.appendChild(chart);
     viewMain.appendChild(footnote);
-    viewMain.appendChild(actions);
+    viewMain.appendChild(wantFriction);
 
     const searchQ = encodeURIComponent(productSearchQuery());
 
