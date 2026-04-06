@@ -98,6 +98,7 @@
   flex-direction: row;
   width: 200%;
   align-items: flex-start;
+  overflow: hidden;
   transition: transform 0.38s cubic-bezier(0.33, 1, 0.68, 1);
 }
 

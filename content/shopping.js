@@ -918,7 +918,7 @@
     const secondIntro = document.createElement("p");
     secondIntro.className = "linger-shop-second-intro";
     secondIntro.textContent =
-      "Open a resale search in a new tab, or look for thrift nearby on Maps.";
+      "Open a resale search, or look for thrift stores nearby.";
 
     function makeOutboundLink(label, href) {
       const a = document.createElement("a");
@@ -979,7 +979,7 @@
     localLinks.className = "linger-shop-second-link-stack";
     localLinks.appendChild(
       makeOutboundLink(
-        "Thrift stores near me (Google Maps)",
+        "Local Thrift Stores",
         "https://www.google.com/maps/search/?api=1&query=" +
           encodeURIComponent("thrift stores near me")
       )
@@ -993,7 +993,18 @@
     viewSecond.appendChild(secOnline);
     viewSecond.appendChild(secLocal);
 
+    function syncShopViewsHeight() {
+      const onSecond = track.classList.contains(
+        "linger-shop-views-track--second"
+      );
+      const active = onSecond ? viewSecond : viewMain;
+      const h = Math.max(1, Math.ceil(active.scrollHeight));
+      track.style.height = h + "px";
+      viewsShell.style.height = h + "px";
+    }
+
     function goSecondhandPage(showSecond) {
+      card.scrollTop = 0;
       if (showSecond) {
         track.classList.add("linger-shop-views-track--second");
         viewMain.setAttribute("aria-hidden", "true");
@@ -1007,6 +1018,14 @@
         if ("inert" in viewMain) viewMain.inert = false;
         if ("inert" in viewSecond) viewSecond.inert = true;
       }
+      requestAnimationFrame(() => {
+        syncShopViewsHeight();
+        card.scrollTop = 0;
+        requestAnimationFrame(() => {
+          syncShopViewsHeight();
+          card.scrollTop = 0;
+        });
+      });
     }
 
     if ("inert" in viewSecond) viewSecond.inert = true;
@@ -1023,8 +1042,15 @@
     root.appendChild(card);
     document.documentElement.appendChild(root);
 
+    const shopViewsResizeObserver = new ResizeObserver(() => {
+      syncShopViewsHeight();
+    });
+    shopViewsResizeObserver.observe(viewMain);
+    shopViewsResizeObserver.observe(viewSecond);
+
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        syncShopViewsHeight();
         card.classList.add("linger-shop-card--in");
       });
     });
