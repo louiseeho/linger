@@ -3,8 +3,8 @@
 .linger-shop-root {
   position: fixed;
   right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 16px;
+  bottom: 16px;
   width: 288px;
   z-index: 999999;
   pointer-events: none;
@@ -21,6 +21,11 @@
   margin-right: 12px;
   margin-left: 8px;
   padding: 14px 14px 16px;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   background: #faf8f5;
   color: #2c2c2a;
   border: 1px solid #e8e4de;
@@ -31,6 +36,10 @@
   transition:
     transform 300ms ease-out,
     opacity 300ms ease-out;
+}
+
+.linger-shop-card::-webkit-scrollbar {
+  display: none;
 }
 
 .linger-shop-card.linger-shop-card--in {
