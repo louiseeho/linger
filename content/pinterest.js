@@ -8,6 +8,7 @@
   const POLL_MAX_TICKS = 18;
 
   const STORAGE_BUDGET_BYTES = 8 * 1024 * 1024;
+  const SETTINGS_STORAGE = "linger_user_settings";
 
   let debounceTimer = null;
   let overlayEl = null;
@@ -15,6 +16,51 @@
   let pollTimer = null;
   let pollTicks = 0;
   let lastPinPreviewUrl = null;
+
+  let cachedPinterestSettings = null;
+
+  function normPinterestHost(h) {
+    return String(h || "")
+      .replace(/^www\./i, "")
+      .toLowerCase();
+  }
+
+  function parsePinterestUserSettings(raw) {
+    const o = raw && typeof raw === "object" ? raw : {};
+    return {
+      usePerSitePinterest: !!o.usePerSitePinterest,
+      pinterestEnabled: o.pinterestEnabled !== false,
+      perSitePinterest:
+        o.perSitePinterest && typeof o.perSitePinterest === "object"
+          ? o.perSitePinterest
+          : {},
+      snoozeUntilMs: typeof o.snoozeUntilMs === "number" ? o.snoozeUntilMs : 0,
+    };
+  }
+
+  function pinterestSettingsSnoozed(settings) {
+    return settings.snoozeUntilMs > Date.now();
+  }
+
+  function pinterestAllowedForHost(settings, hostname) {
+    const h = normPinterestHost(hostname);
+    if (
+      settings.usePerSitePinterest &&
+      Object.prototype.hasOwnProperty.call(settings.perSitePinterest, h)
+    ) {
+      return !!settings.perSitePinterest[h];
+    }
+    return settings.pinterestEnabled;
+  }
+
+  function refreshPinterestSettingsCache() {
+    chrome.storage.local.get([SETTINGS_STORAGE], (data) => {
+      if (chrome.runtime && chrome.runtime.lastError) return;
+      cachedPinterestSettings = parsePinterestUserSettings(
+        data[SETTINGS_STORAGE]
+      );
+    });
+  }
 
   /** One capital at the start of the phrase; rest lower — consistent UI for chips and pills. */
   function toSentenceCase(s) {
@@ -536,6 +582,16 @@
 
   function scheduleShowOverlay() {
     if (overlayEl) return;
+    if (cachedPinterestSettings) {
+      if (pinterestSettingsSnoozed(cachedPinterestSettings)) return;
+      if (
+        !pinterestAllowedForHost(
+          cachedPinterestSettings,
+          location.hostname
+        )
+      )
+        return;
+    }
 
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
@@ -584,7 +640,7 @@
     }, 1200);
   }
 
-  function showOverlay() {
+  function showOverlayInner() {
     if (overlayEl) return;
 
     const root = document.createElement("div");
@@ -1165,9 +1221,37 @@
     void runListItems();
   }
 
+  function showOverlay() {
+    if (overlayEl) return;
+    chrome.storage.local.get([SETTINGS_STORAGE], (data) => {
+      try {
+        if (chrome.runtime && chrome.runtime.lastError) return;
+        const settings = parsePinterestUserSettings(data[SETTINGS_STORAGE]);
+        if (pinterestSettingsSnoozed(settings)) return;
+        if (!pinterestAllowedForHost(settings, location.hostname)) return;
+        showOverlayInner();
+      } catch (_) {
+        /* silent */
+      }
+    });
+  }
+
   function boot() {
-    bindSaveIntentListeners();
-    observe();
+    chrome.storage.local.get([SETTINGS_STORAGE], (data) => {
+      if (chrome.runtime && chrome.runtime.lastError) {
+        cachedPinterestSettings = parsePinterestUserSettings(null);
+      } else {
+        cachedPinterestSettings = parsePinterestUserSettings(
+          data[SETTINGS_STORAGE]
+        );
+      }
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== "local" || !changes[SETTINGS_STORAGE]) return;
+        refreshPinterestSettingsCache();
+      });
+      bindSaveIntentListeners();
+      observe();
+    });
   }
 
   if (document.readyState === "loading") {

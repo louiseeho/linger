@@ -1,0 +1,259 @@
+.settings-back-wrap {
+  margin: 0 0 6px;
+}
+
+.settings-back {
+  font-size: 0.8rem;
+  color: #6b6b66;
+  text-decoration: none;
+}
+
+.settings-back:hover {
+  color: #2c2c2a;
+  text-decoration: underline;
+}
+
+.settings-page-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: #2c2c2a;
+}
+
+.settings-section {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8e4dc;
+}
+
+.settings-section:last-of-type {
+  border-bottom: none;
+}
+
+.settings-hint {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #5c5c58;
+}
+
+.settings-hint--tight {
+  margin-bottom: 8px;
+}
+
+.settings-callout {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: rgba(107, 133, 105, 0.08);
+  border: 1px solid rgba(107, 133, 105, 0.22);
+  border-radius: 10px;
+}
+
+.settings-explainer {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #3d3d3a;
+}
+
+.settings-explainer li {
+  margin-bottom: 6px;
+}
+
+.settings-explainer li:last-child {
+  margin-bottom: 0;
+}
+
+.settings-hint code {
+  font-size: 0.78rem;
+  padding: 1px 4px;
+  background: rgba(44, 44, 42, 0.06);
+  border-radius: 4px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  color: #2c2c2a;
+  cursor: pointer;
+}
+
+.settings-row--spaced {
+  margin-top: 18px;
+}
+
+.settings-row--number {
+  cursor: default;
+  flex-wrap: wrap;
+}
+
+.settings-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #6b8569;
+  flex-shrink: 0;
+}
+
+.settings-site-wrap {
+  margin: 0 0 8px 28px;
+}
+
+.settings-site-wrap.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.settings-site-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+
+.settings-site-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: #fffef9;
+  border: 1px solid #e8e4dc;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.settings-site-host {
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+}
+
+.settings-site-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.settings-site-toggle {
+  font-size: 0.75rem;
+  color: #5c5c58;
+}
+
+.settings-remove-host {
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-family: inherit;
+  border: 1px solid #d8d4cc;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  color: #6b6b66;
+}
+
+.settings-remove-host:hover {
+  border-color: #c94a48;
+  color: #c94a48;
+}
+
+.settings-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-text-input {
+  flex: 1;
+  min-width: 140px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid #d8d4cc;
+  border-radius: 8px;
+  background: #fffef9;
+}
+
+.settings-text-input:focus {
+  outline: none;
+  border-color: #8a9e8c;
+}
+
+.settings-inline-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #3d3d3a;
+  white-space: nowrap;
+}
+
+.settings-number-input {
+  width: 72px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid #d8d4cc;
+  border-radius: 8px;
+  background: #fffef9;
+}
+
+.settings-number-input:focus {
+  outline: none;
+  border-color: #8a9e8c;
+}
+
+.settings-btn-primary,
+.settings-btn-secondary {
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+}
+
+.settings-btn-primary {
+  background: #6b8569;
+  color: #faf8f5;
+}
+
+.settings-btn-primary:hover {
+  background: #5a7358;
+}
+
+.settings-btn-secondary {
+  background: #e8e4dc;
+  color: #2c2c2a;
+}
+
+.settings-btn-secondary:hover {
+  background: #ddd8ce;
+}
+
+.settings-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.settings-status {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: #5c8a5c;
+  min-height: 1.2em;
+}
+
+.settings-snooze-line {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: #3d3d3a;
+}
+
+.settings-snooze-line:empty {
+  display: none;
+}

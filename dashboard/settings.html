@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Linger — Settings</title>
+    <link rel="stylesheet" href="dashboard.css" />
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <div class="dash">
+      <header class="dash-header dash-header--toolbar">
+        <div class="dash-header-main">
+          <p class="settings-back-wrap">
+            <a class="settings-back" href="dashboard.html">← Dashboard</a>
+          </p>
+          <h1 class="settings-page-title">Settings</h1>
+          <p class="dash-tagline">Control nudges, snooze, and your data.</p>
+        </div>
+      </header>
+
+      <section class="dash-section settings-section" aria-labelledby="export-heading">
+        <h2 id="export-heading" class="dash-section-title">Taste Profile</h2>
+        <p class="settings-hint">
+          Download your saved logs and grouping cache as JSON (for backup or
+          moving devices).
+        </p>
+        <button type="button" id="settings-export" class="settings-btn-primary">
+          Export taste profile
+        </button>
+        <p id="settings-export-status" class="settings-status" aria-live="polite"></p>
+      </section>
+
+      <section class="dash-section settings-section" aria-labelledby="global-heading">
+        <h2 id="global-heading" class="dash-section-title">Global Toggles</h2>
+        <p class="settings-hint">
+          When per-site rules are off, these apply on every site. When per-site
+          rules are on for shopping or Pinterest, only sites you did
+          <strong>not</strong> add to the list still follow these global
+          switches.
+        </p>
+        <label class="settings-row">
+          <input type="checkbox" id="settings-shopping-global" />
+          <span>Shopping nudges on product pages</span>
+        </label>
+        <label class="settings-row">
+          <input type="checkbox" id="settings-pinterest-global" />
+          <span>Pinterest save prompts</span>
+        </label>
+      </section>
+
+      <section class="dash-section settings-section" aria-labelledby="per-site-heading">
+        <h2 id="per-site-heading" class="dash-section-title">Per-Site Overrides</h2>
+        <div class="settings-callout">
+          <p class="settings-hint settings-hint--tight">
+            This is <strong>not</strong> an &ldquo;only show here&rdquo; list.
+            Each site you add gets its <strong>own</strong> allow/block switch.
+          </p>
+          <ul class="settings-explainer">
+            <li>
+              <strong>Allow</strong> (checkbox on) = Linger <strong>may</strong>
+              show shopping nudges or Pinterest prompts on that site (other
+              settings like snooze still apply).
+            </li>
+            <li>
+              <strong>Block</strong> (checkbox off) = Linger
+              <strong>will not</strong> pop up on that site.
+            </li>
+            <li>
+              Sites you <strong>never</strong> add to the list still follow the
+              global toggles above, not the per-row checkboxes.
+            </li>
+          </ul>
+        </div>
+        <p class="settings-hint">
+          Use hostnames only (e.g. <code>amazon.com</code>), without
+          <code>https://</code>. Turn on per-site mode below, then add sites.
+        </p>
+        <label class="settings-row">
+          <input type="checkbox" id="settings-use-per-site-shopping" />
+          <span>Use per-site rules for shopping</span>
+        </label>
+        <div id="settings-shopping-sites-wrap" class="settings-site-wrap">
+          <ul id="settings-shopping-sites" class="settings-site-list"></ul>
+          <div class="settings-add-row">
+            <input
+              type="text"
+              id="settings-shopping-host-input"
+              class="settings-text-input"
+              placeholder="example.com"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <label class="settings-inline-check">
+              <input type="checkbox" id="settings-shopping-host-enabled" checked />
+              <span>Allow nudges</span>
+            </label>
+            <button type="button" id="settings-shopping-host-add" class="settings-btn-secondary">
+              Add
+            </button>
+          </div>
+        </div>
+        <label class="settings-row settings-row--spaced">
+          <input type="checkbox" id="settings-use-per-site-pinterest" />
+          <span>Use per-site rules for Pinterest</span>
+        </label>
+        <div id="settings-pinterest-sites-wrap" class="settings-site-wrap">
+          <ul id="settings-pinterest-sites" class="settings-site-list"></ul>
+          <div class="settings-add-row">
+            <input
+              type="text"
+              id="settings-pinterest-host-input"
+              class="settings-text-input"
+              placeholder="pinterest.com"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <label class="settings-inline-check">
+              <input type="checkbox" id="settings-pinterest-host-enabled" checked />
+              <span>Allow prompts</span>
+            </label>
+            <button type="button" id="settings-pinterest-host-add" class="settings-btn-secondary">
+              Add
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="dash-section settings-section" aria-labelledby="snooze-heading">
+        <h2 id="snooze-heading" class="dash-section-title">Snooze</h2>
+        <p class="settings-hint">
+          Pauses shopping nudges and Pinterest prompts for 24 hours.
+        </p>
+        <p id="settings-snooze-status" class="settings-snooze-line"></p>
+        <div class="settings-btn-row">
+          <button type="button" id="settings-snooze-24" class="settings-btn-primary">
+            Snooze 24 hours
+          </button>
+          <button type="button" id="settings-snooze-clear" class="settings-btn-secondary">
+            Clear snooze
+          </button>
+        </div>
+      </section>
+
+      <section class="dash-section settings-section" aria-labelledby="cap-heading">
+        <h2 id="cap-heading" class="dash-section-title">Shopping Nudge Limit</h2>
+        <p class="settings-hint">
+          Maximum shopping interventions shown per calendar day (your local
+          time). Use 0 for no limit.
+        </p>
+        <label class="settings-row settings-row--number">
+          <span>Max per day</span>
+          <input
+            type="number"
+            id="settings-max-shopping"
+            class="settings-number-input"
+            min="0"
+            max="999"
+            value="0"
+          />
+        </label>
+      </section>
+    </div>
+    <script src="settings.js"></script>
+  </body>
+</html>

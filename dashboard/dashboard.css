@@ -38,6 +38,46 @@ body::-webkit-scrollbar {
   margin-bottom: 20px;
 }
 
+.dash-header--toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dash-header-main {
+  min-width: 0;
+}
+
+.dash-settings-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-top: 2px;
+  border-radius: 10px;
+  border: 1px solid #d8d4cc;
+  background: #fffef9;
+  color: #5c5c58;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.dash-settings-btn:hover {
+  border-color: #8a9e8c;
+  color: #2c2c2a;
+  background: #f5f3ee;
+}
+
+.dash-settings-icon {
+  display: block;
+}
+
 .dash-title {
   margin: 0;
   line-height: 0;
@@ -390,16 +430,17 @@ body::-webkit-scrollbar {
   padding: 10px;
   font-size: 0.8rem;
   font-family: inherit;
-  color: #6b6b66;
+  color: #c94a48;
   background: transparent;
-  border: 1px solid #d8d4cc;
+  border: 1px solid #c94a48;
   border-radius: 8px;
   cursor: pointer;
 }
 
 .dash-clear:hover {
-  border-color: #8a9e8c;
-  color: #2c2c2a;
+  border-color: #b03e3c;
+  color: #b03e3c;
+  background: rgba(201, 74, 72, 0.08);
 }
 
 .dash-clear-confirm {

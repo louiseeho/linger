@@ -4,7 +4,96 @@
   const STORAGE_LOGS = "linger_logs";
   const STORAGE_DISMISSALS = "linger_intervention_dismissals";
   const SESSION_DISMISSED = "linger_intervention_dismissed";
+  const SETTINGS_STORAGE = "linger_user_settings";
+  const DAILY_SHOP_INTERVENTIONS = "linger_shop_intervention_daily";
   const SHOW_DELAY_MS = 1500;
+
+  function normSettingsHost(h) {
+    return String(h || "")
+      .replace(/^www\./i, "")
+      .toLowerCase();
+  }
+
+  function parseUserSettings(raw) {
+    const o = raw && typeof raw === "object" ? raw : {};
+    const max = o.maxShoppingInterventionsPerDay;
+    let maxN = null;
+    if (max != null && max !== "") {
+      const n = parseInt(max, 10);
+      if (Number.isFinite(n) && n > 0) maxN = n;
+    }
+    return {
+      usePerSiteShopping: !!o.usePerSiteShopping,
+      shoppingEnabled: o.shoppingEnabled !== false,
+      perSiteShopping:
+        o.perSiteShopping && typeof o.perSiteShopping === "object"
+          ? o.perSiteShopping
+          : {},
+      snoozeUntilMs: typeof o.snoozeUntilMs === "number" ? o.snoozeUntilMs : 0,
+      maxShoppingInterventionsPerDay: maxN,
+    };
+  }
+
+  function settingsSnoozed(settings) {
+    return settings.snoozeUntilMs > Date.now();
+  }
+
+  function shoppingAllowedForHost(settings, hostname) {
+    const h = normSettingsHost(hostname);
+    if (
+      settings.usePerSiteShopping &&
+      Object.prototype.hasOwnProperty.call(settings.perSiteShopping, h)
+    ) {
+      return !!settings.perSiteShopping[h];
+    }
+    return settings.shoppingEnabled;
+  }
+
+  function localCalendarDayKey() {
+    const d = new Date();
+    return (
+      d.getFullYear() +
+      "-" +
+      String(d.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(d.getDate()).padStart(2, "0")
+    );
+  }
+
+  function tryConsumeShoppingDailySlot(maxPerDay, cb) {
+    if (maxPerDay == null) {
+      cb(true);
+      return;
+    }
+    const key = DAILY_SHOP_INTERVENTIONS;
+    chrome.storage.local.get([key], (data) => {
+      try {
+        if (chrome.runtime && chrome.runtime.lastError) {
+          cb(false);
+          return;
+        }
+        const today = localCalendarDayKey();
+        let rec = data[key];
+        if (!rec || typeof rec !== "object" || rec.day !== today) {
+          rec = { day: today, count: 0 };
+        }
+        const n = typeof rec.count === "number" ? rec.count : 0;
+        if (n >= maxPerDay) {
+          cb(false);
+          return;
+        }
+        chrome.storage.local.set({ [key]: { day: today, count: n + 1 } }, () => {
+          if (chrome.runtime && chrome.runtime.lastError) {
+            cb(false);
+            return;
+          }
+          cb(true);
+        });
+      } catch (_) {
+        cb(false);
+      }
+    });
+  }
 
   /**
    * kg CO₂e ballpark for new item (manufacturing + shipping).
@@ -1184,17 +1273,40 @@
       if (!productRegion && hasLikelyProductPage()) productRegion = "tops";
       if (!productRegion) return;
 
-      chrome.storage.local.get([STORAGE_LOGS], (data) => {
+      chrome.storage.local.get([STORAGE_LOGS, SETTINGS_STORAGE], (data) => {
         try {
           if (chrome.runtime && chrome.runtime.lastError) return;
+          const settings = parseUserSettings(data[SETTINGS_STORAGE]);
+          if (settingsSnoozed(settings)) return;
+          if (!shoppingAllowedForHost(settings, location.hostname)) return;
           const logs = Array.isArray(data[STORAGE_LOGS]) ? data[STORAGE_LOGS] : [];
           const { percentages } = getTasteProfile(logs);
 
           window.setTimeout(() => {
             try {
               if (sessionStorage.getItem(SESSION_DISMISSED) === "1") return;
-              const root = showIntervention(productRegion, percentages);
-              void runShopEchoPipeline(root, logs);
+              chrome.storage.local.get([SETTINGS_STORAGE], (d2) => {
+                try {
+                  if (chrome.runtime && chrome.runtime.lastError) return;
+                  const s2 = parseUserSettings(d2[SETTINGS_STORAGE]);
+                  if (settingsSnoozed(s2)) return;
+                  if (!shoppingAllowedForHost(s2, location.hostname)) return;
+                  tryConsumeShoppingDailySlot(
+                    s2.maxShoppingInterventionsPerDay,
+                    (ok) => {
+                      if (!ok) return;
+                      try {
+                        const root = showIntervention(productRegion, percentages);
+                        void runShopEchoPipeline(root, logs);
+                      } catch (_) {
+                        /* silent */
+                      }
+                    }
+                  );
+                } catch (_) {
+                  /* silent */
+                }
+              });
             } catch (_) {
               /* silent */
             }
