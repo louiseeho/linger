@@ -181,14 +181,6 @@
     buildMetaphorBulb,
   ];
 
-  /** Typical new fast-fashion price midpoints (USD) when page price missing. */
-  const FALLBACK_RETAIL_USD = {
-    tops: 38,
-    bottoms: 58,
-    shoes: 88,
-    accessories: 42,
-  };
-
   const CATEGORY_MAP = {
     tops: [
       "t-shirt",
@@ -872,13 +864,132 @@
     return { multiplier: 1.0, tier: 3 };
   }
 
+  const CURRENCY_TO_GBP = {
+    GBP: 1.0,
+    USD: 0.79,
+    EUR: 0.86,
+    CAD: 0.58,
+    AUD: 0.51,
+    SEK: 0.073,
+    DKK: 0.115,
+    NOK: 0.073,
+    CHF: 0.9,
+    JPY: 0.0053,
+  };
+
   function toPriceGBP(price, currency) {
     if (price == null || !Number.isFinite(price) || price <= 0) return null;
     const c = (currency || "GBP").toUpperCase();
-    if (c === "GBP") return price;
-    if (c === "USD") return price * 0.79;
-    if (c === "EUR") return price * 0.86;
-    return null;
+    const rate = CURRENCY_TO_GBP[c];
+    if (rate == null) return null;
+    return price * rate;
+  }
+
+  const FALLBACK_RETAIL_GBP = {
+    tops: { 1: 11, 2: 28, 3: 42, 4: 72, 5: 110 },
+    bottoms: { 1: 13, 2: 32, 3: 52, 4: 80, 5: 115 },
+    shoes: { 1: 16, 2: 42, 3: 75, 4: 110, 5: 155 },
+    accessories: { 1: 9, 2: 24, 3: 42, 4: 68, 5: 115 },
+  };
+
+  // Resale fractions of new retail by region × brand tier (heuristic).
+  // See product brief: Vestiaire / ThredUp / Scaleorder / Attire / Worn Wear.
+  const RESALE_BANDS = {
+    tops: {
+      1: [0.04, 0.14],
+      2: [0.12, 0.26],
+      3: [0.22, 0.42],
+      4: [0.35, 0.58],
+      5: [0.48, 0.72],
+    },
+    bottoms: {
+      1: [0.04, 0.12],
+      2: [0.14, 0.28],
+      3: [0.25, 0.44],
+      4: [0.38, 0.58],
+      5: [0.48, 0.68],
+    },
+    shoes: {
+      1: [0.06, 0.16],
+      2: [0.18, 0.36],
+      3: [0.28, 0.5],
+      4: [0.4, 0.62],
+      5: [0.52, 0.76],
+    },
+    accessories: {
+      1: [0.04, 0.12],
+      2: [0.14, 0.3],
+      3: [0.26, 0.48],
+      4: [0.38, 0.6],
+      5: [0.52, 0.78],
+    },
+  };
+
+  const RESALE_BAND_FALLBACK = {
+    1: [0.04, 0.13],
+    2: [0.13, 0.28],
+    3: [0.23, 0.43],
+    4: [0.37, 0.59],
+    5: [0.5, 0.73],
+  };
+
+  function getResaleBand(productRegion, brandTier) {
+    const tier = typeof brandTier === "number" && brandTier >= 1 && brandTier <= 5 ? brandTier : 3;
+    const regionBands = RESALE_BANDS[productRegion] ?? RESALE_BAND_FALLBACK;
+    const band = regionBands[tier] ?? regionBands[3] ?? RESALE_BAND_FALLBACK[3];
+    return band;
+  }
+
+  const RESALE_ARCHETYPE_MODIFIER = {
+    "denim jeans": 1.32,
+    "leather jacket": 1.4,
+    "down jacket": 1.28,
+    "puffer jacket": 1.28,
+    parka: 1.22,
+    "wool coat": 1.2,
+    blazer: 1.18,
+    "leather boot": 1.3,
+    "ankle boot": 1.2,
+    "running shoe": 1.22,
+    trainer: 1.18,
+    "leather bag": 1.45,
+    "leather handbag": 1.45,
+    crossbody: 1.3,
+    backpack: 1.2,
+    cashmere: 1.35,
+    "wool sweater": 1.15,
+    "t-shirt": 0.62,
+    "graphic tee": 0.7,
+    "vest top": 0.52,
+    "crop top": 0.5,
+    camisole: 0.48,
+    leggings: 0.65,
+    "yoga pants": 0.65,
+    shorts: 0.68,
+    swimwear: 0.3,
+    "flip flop": 0.45,
+    slipper: 0.35,
+    socks: 0.1,
+    tights: 0.12,
+    underwear: 0.05,
+    jeans: 1.32,
+    "knit sweater": 1.15,
+  };
+
+  function archetypeResaleModifier(archetypeKey) {
+    if (!archetypeKey || archetypeKey === "default") return 1.0;
+    if (RESALE_ARCHETYPE_MODIFIER[archetypeKey] !== undefined) {
+      return RESALE_ARCHETYPE_MODIFIER[archetypeKey];
+    }
+    const entries = Object.entries(RESALE_ARCHETYPE_MODIFIER).sort(
+      (a, b) => b[0].length - a[0].length
+    );
+    for (const [key, mod] of entries) {
+      if (archetypeKey.includes(key) || key.includes(archetypeKey)) {
+        return mod;
+      }
+    }
+    return 1.0;
   }
 
   function buildCarbonSignalText(structured) {
@@ -1366,70 +1477,152 @@
   }
 
   function extractRetailPriceAndCurrency() {
-    let price = null;
+    let salePrice = null;
+    let origPrice = null;
     let currency = "USD";
 
-    function trySet(n, cur) {
-      if (!Number.isFinite(n) || n <= 0 || n > 250000) return;
-      price = n;
-      if (cur && typeof cur === "string" && cur.length === 3) currency = cur.toUpperCase();
+    function isProductNode(node) {
+      const typeArr = Array.isArray(node["@type"])
+        ? node["@type"]
+        : node["@type"] != null
+          ? [node["@type"]]
+          : [];
+      return typeArr.some((t) => {
+        const tail = String(t).trim().replace(/^https?:\/\/schema\.org\//i, "");
+        const low = tail.toLowerCase();
+        return low === "product" || low === "individualproduct";
+      });
+    }
+
+    function parseMoney(v) {
+      const p = parseFloat(String(v).replace(/[^\d.\-]/g, ""));
+      return Number.isFinite(p) && p > 0 && p <= 250000 ? p : null;
     }
 
     try {
-      const metas = document.querySelectorAll(
-        'meta[property="og:price:amount"], meta[property="product:price:amount"], meta[itemprop="price"]'
-      );
-      metas.forEach((m) => {
-        const c = m.getAttribute("content");
-        if (c) trySet(parseFloat(String(c).replace(/[^\d.]/g, "")), null);
-      });
-      const curMeta = document.querySelector(
-        'meta[property="product:price:currency"], meta[itemprop="priceCurrency"]'
-      );
-      if (curMeta && curMeta.getAttribute("content"))
-        currency = curMeta.getAttribute("content").toUpperCase();
+      for (const script of document.querySelectorAll(
+        'script[type="application/ld+json"]'
+      )) {
+        try {
+          const raw = JSON.parse(script.textContent || "{}");
+          const roots = Array.isArray(raw) ? raw : [raw];
+          const nodes = [];
+          for (const root of roots) {
+            if (root && typeof root === "object" && Array.isArray(root["@graph"])) {
+              for (const g of root["@graph"]) nodes.push(g);
+            } else if (root) nodes.push(root);
+          }
+          for (const node of nodes) {
+            if (!node || typeof node !== "object") continue;
+            if (!isProductNode(node)) continue;
 
-      document
-        .querySelectorAll('script[type="application/ld+json"]')
-        .forEach((s) => {
-          try {
-            const j = JSON.parse(s.textContent || "{}");
-            const list = Array.isArray(j) ? j : [j];
-            list.forEach((node) => {
-              if (!node || typeof node !== "object") return;
-              const types = [].concat(node["@type"] || []);
-              if (
-                types.includes("Product") ||
-                (typeof node["@type"] === "string" &&
-                  String(node["@type"]).includes("Product"))
-              ) {
-                const offers = node.offers;
-                const off = Array.isArray(offers) ? offers[0] : offers;
-                if (off && off.price != null) {
-                  trySet(
-                    parseFloat(String(off.price).replace(/[^\d.]/g, "")),
-                    off.priceCurrency
-                  );
+            const offersRaw = node.offers;
+            const offerList = Array.isArray(offersRaw)
+              ? offersRaw
+              : [offersRaw].filter(Boolean);
+
+            for (const offer of offerList) {
+              if (!offer || typeof offer !== "object") continue;
+              if (offer.priceCurrency)
+                currency = String(offer.priceCurrency).toUpperCase();
+
+              if (offer.price != null && salePrice == null) {
+                const p = parseMoney(offer.price);
+                if (p != null) salePrice = p;
+              }
+
+              const specs = [].concat(offer.priceSpecification || []).filter(Boolean);
+              for (const spec of specs) {
+                if (!spec || typeof spec !== "object") continue;
+                const pt = String(spec.priceType || "");
+                const isStrikethrough =
+                  pt.includes("StrikethroughPrice") || pt.includes("ListPrice");
+                if (spec.priceCurrency)
+                  currency = String(spec.priceCurrency).toUpperCase();
+                const specPrice = spec.price != null ? parseMoney(spec.price) : null;
+                if (isStrikethrough) {
+                  if (origPrice == null && specPrice != null) origPrice = specPrice;
+                } else if (!spec.validForMemberTier) {
+                  if (salePrice == null && specPrice != null) salePrice = specPrice;
                 }
               }
-            });
-          } catch (_) {
-            /* ignore */
+            }
           }
-        });
+        } catch (_) {
+          continue;
+        }
+      }
 
-      const ip = document.querySelector(
-        '[itemprop="price"][content], [itemprop="price"]'
-      );
-      if (ip) {
-        const c = ip.getAttribute("content") || ip.textContent;
-        if (c) trySet(parseFloat(String(c).replace(/[^\d.]/g, "")), null);
+      if (salePrice == null) {
+        const m1 = document.querySelector(
+          'meta[property="og:price:amount"], meta[property="product:price:amount"]'
+        );
+        if (m1) {
+          const ogPrice = m1.getAttribute("content");
+          if (ogPrice) {
+            const p = parseMoney(ogPrice);
+            if (p != null) salePrice = p;
+          }
+        }
+        const m2 = document.querySelector(
+          'meta[property="product:price:currency"], meta[property="og:price:currency"], meta[itemprop="priceCurrency"]'
+        );
+        if (m2) {
+          const cur = m2.getAttribute("content");
+          if (cur) currency = cur.toUpperCase();
+        }
+      }
+
+      if (salePrice == null) {
+        const el = document.querySelector(
+          '[itemprop="price"][content], [itemprop="price"]'
+        );
+        if (el) {
+          const c = el.getAttribute("content") || el.textContent;
+          const p = parseMoney(c);
+          if (p != null) salePrice = p;
+        }
+      }
+
+      if (origPrice == null) {
+        const strikeSel = [
+          "s [itemprop='price']",
+          "del [itemprop='price']",
+          ".original-price",
+          ".was-price",
+          ".price-was",
+          ".price__compare",
+          ".compare-at-price",
+          "[data-price-compare]",
+          ".product__price--compare",
+          ".woocommerce-Price-amount del",
+        ].join(", ");
+        const strikeEl = document.querySelector(strikeSel);
+        if (strikeEl) {
+          const raw = String(strikeEl.textContent || "")
+            .replace(/[^\d.,]/g, "")
+            .replace(",", ".");
+          const val = parseFloat(raw);
+          if (Number.isFinite(val) && val > 0 && val <= 250000) {
+            if (!salePrice || val > salePrice) origPrice = val;
+          }
+        }
       }
     } catch (_) {
       /* ignore */
     }
 
-    return { price, currency };
+    const resolvedPrice =
+      origPrice != null && origPrice > (salePrice ?? 0) ? origPrice : salePrice;
+    const isOriginalPrice =
+      origPrice != null && origPrice > (salePrice ?? 0);
+
+    return {
+      price: resolvedPrice,
+      currency,
+      isOriginalPrice,
+      salePrice,
+    };
   }
 
   function formatMoney(amount, currency) {
@@ -1503,14 +1696,42 @@
   }
 
   function appendThriftSavings(container, productRegion) {
-    const { price, currency } = extractRetailPriceAndCurrency();
+    const { price, currency, isOriginalPrice, salePrice } =
+      extractRetailPriceAndCurrency();
     const hasPrice = price != null && price > 0;
-    const ref = hasPrice ? price : FALLBACK_RETAIL_USD[productRegion] || 45;
-    const usedLow = Math.round(ref * 0.26);
-    const usedHigh = Math.round(ref * 0.48);
+    const fmt = (n) => formatMoney(n, currency || "USD");
+
+    const structured = extractStructuredData();
+    const { tier: brandTier } = brandTierMultiplier(
+      structured.brand,
+      location.hostname
+    );
+    const region = ["tops", "bottoms", "shoes", "accessories"].includes(
+      productRegion
+    )
+      ? productRegion
+      : "tops";
+    const signalText = buildCarbonSignalText(structured);
+    const { archetypeKey } = pickCarbonArchetypeBand(signalText, region);
+
+    const curU = (currency || "GBP").toUpperCase();
+    const toGBP = CURRENCY_TO_GBP[curU] ?? 1.0;
+    const fromGBP = 1 / toGBP;
+    const tierRow = FALLBACK_RETAIL_GBP[region];
+    const fallbackGBP =
+      tierRow && tierRow[brandTier] != null ? tierRow[brandTier] : 42;
+    const refGBP = hasPrice ? price * toGBP : fallbackGBP;
+    const ref = refGBP * fromGBP;
+
+    const [lowFrac, highFrac] = getResaleBand(region, brandTier);
+    const archMod = archetypeResaleModifier(archetypeKey);
+    const adjLowFrac = Math.min(0.95, Math.max(0.03, lowFrac * archMod));
+    const adjHighFrac = Math.min(0.95, Math.max(0.03, highFrac * archMod));
+    const usedLow = Math.round(ref * adjLowFrac);
+    const usedHigh = Math.round(ref * adjHighFrac);
+
     const saveIfLow = Math.max(0, Math.round(ref - usedHigh));
     const saveIfHigh = Math.max(0, Math.round(ref - usedLow));
-    const fmt = (n) => formatMoney(n, currency);
 
     const title = document.createElement("div");
     title.className = "linger-shop-savings-title";
@@ -1527,6 +1748,15 @@
       listStrong.textContent = fmt(ref);
       listingRow.appendChild(listStrong);
       container.appendChild(listingRow);
+      if (isOriginalPrice && salePrice != null && Number.isFinite(salePrice)) {
+        const note = document.createElement("div");
+        note.className = "linger-shop-savings-note";
+        note.textContent =
+          "Compared to full price — this listing is on sale at " +
+          fmt(salePrice) +
+          ".";
+        container.appendChild(note);
+      }
     }
 
     const bandLab = document.createElement("div");

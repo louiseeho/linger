@@ -395,6 +395,13 @@
   color: #2c2c2a;
 }
 
+.linger-shop-savings-note {
+  font-size: 0.65rem;
+  line-height: 1.35;
+  color: #8a8883;
+  margin: -4px 0 10px;
+}
+
 .linger-shop-savings-muted {
   font-size: 0.68rem;
   line-height: 1.35;
