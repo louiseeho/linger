@@ -1733,59 +1733,52 @@
     const saveIfLow = Math.max(0, Math.round(ref - usedHigh));
     const saveIfHigh = Math.max(0, Math.round(ref - usedLow));
 
-    const title = document.createElement("div");
-    title.className = "linger-shop-savings-title";
-    title.textContent = hasPrice
-      ? "Thrift / resale vs this listing"
-      : "Typical secondhand range";
-    container.appendChild(title);
+    const saveStack = document.createElement("div");
+    saveStack.className = "linger-shop-savings-save-stack";
+    const saveLabel = document.createElement("div");
+    saveLabel.className = "linger-shop-impact-title";
+    saveLabel.textContent = "You could save";
+    const saveNumWrap = document.createElement("div");
+    saveNumWrap.className = "linger-shop-impact-number";
+    const saveAmt = document.createElement("strong");
+    saveAmt.textContent = fmt(saveIfLow) + " \u2013 " + fmt(saveIfHigh);
+    saveNumWrap.appendChild(saveAmt);
+    saveStack.appendChild(saveLabel);
+    saveStack.appendChild(saveNumWrap);
+    container.appendChild(saveStack);
 
-    if (hasPrice) {
-      const listingRow = document.createElement("div");
-      listingRow.className = "linger-shop-savings-listing";
-      listingRow.appendChild(document.createTextNode("This listing: "));
-      const listStrong = document.createElement("strong");
-      listStrong.textContent = fmt(ref);
-      listingRow.appendChild(listStrong);
-      container.appendChild(listingRow);
-      if (isOriginalPrice && salePrice != null && Number.isFinite(salePrice)) {
-        const note = document.createElement("div");
-        note.className = "linger-shop-savings-note";
-        note.textContent =
-          "Compared to full price — this listing is on sale at " +
-          fmt(salePrice) +
-          ".";
-        container.appendChild(note);
-      }
+    const rows = document.createElement("div");
+    rows.className = "linger-shop-savings-rows";
+
+    const rowListing = document.createElement("div");
+    rowListing.className = "linger-shop-savings-row";
+    const labListing = document.createElement("span");
+    labListing.className = "linger-shop-savings-row-label";
+    labListing.textContent = hasPrice ? "This listing " : "Typical new (estimate) ";
+    rowListing.appendChild(labListing);
+    const refStrong = document.createElement("strong");
+    refStrong.textContent = fmt(ref);
+    rowListing.appendChild(refStrong);
+    if (hasPrice && isOriginalPrice && salePrice != null && Number.isFinite(salePrice)) {
+      const saleSpan = document.createElement("span");
+      saleSpan.className = "linger-shop-savings-row-suffix";
+      saleSpan.textContent = " (on sale " + fmt(salePrice) + ")";
+      rowListing.appendChild(saleSpan);
     }
+    rows.appendChild(rowListing);
 
-    const bandLab = document.createElement("div");
-    bandLab.className = "linger-shop-savings-muted";
-    bandLab.textContent = hasPrice
-      ? "Similar pieces often show up for about:"
-      : "We couldn\u2019t read this page\u2019s price. Ballpark secondhand band:";
+    const rowSimilar = document.createElement("div");
+    rowSimilar.className = "linger-shop-savings-row";
+    const labSimilar = document.createElement("span");
+    labSimilar.className = "linger-shop-savings-row-label";
+    labSimilar.textContent = "Similar secondhand pieces ";
+    rowSimilar.appendChild(labSimilar);
+    const simStrong = document.createElement("strong");
+    simStrong.textContent = fmt(usedLow) + " \u2013 " + fmt(usedHigh);
+    rowSimilar.appendChild(simStrong);
+    rows.appendChild(rowSimilar);
 
-    const bandNum = document.createElement("div");
-    bandNum.className = "linger-shop-savings-highlight";
-    bandNum.textContent = fmt(usedLow) + " \u2013 " + fmt(usedHigh);
-
-    const saveLab = document.createElement("div");
-    saveLab.className = "linger-shop-savings-muted";
-    saveLab.style.marginTop = "10px";
-    saveLab.textContent = hasPrice
-      ? "You could keep about:"
-      : "Versus typical new for this type (~" + fmt(ref) + "), you might save about:";
-
-    const saveNum = document.createElement("div");
-    saveNum.className = "linger-shop-savings-savehero";
-    const saveStrong = document.createElement("strong");
-    saveStrong.textContent = fmt(saveIfLow) + " \u2013 " + fmt(saveIfHigh);
-    saveNum.appendChild(saveStrong);
-
-    container.appendChild(bandLab);
-    container.appendChild(bandNum);
-    container.appendChild(saveLab);
-    container.appendChild(saveNum);
+    container.appendChild(rows);
   }
 
   function productSearchQuery() {
@@ -1914,11 +1907,6 @@
     chart.className = "linger-shop-chart";
     renderBarChart(chart, percentages);
 
-    const footnote = document.createElement("p");
-    footnote.className = "linger-shop-footnote";
-    footnote.textContent =
-      "Ballpark figures only — not carbon accounting or financial advice. Thrift prices vary by city, store, and luck.";
-
     const secondhandSlot = document.createElement("div");
     secondhandSlot.className = "linger-shop-secondhand-slot";
     const btnSecondhand = document.createElement("button");
@@ -2000,7 +1988,6 @@
     viewMain.appendChild(secondhandSlot);
     viewMain.appendChild(chartTitle);
     viewMain.appendChild(chart);
-    viewMain.appendChild(footnote);
     viewMain.appendChild(wantFriction);
 
     const searchQ = encodeURIComponent(productSearchQuery());

@@ -374,70 +374,45 @@
   border: 1px solid rgba(138, 158, 140, 0.3);
 }
 
-.linger-shop-savings-title {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #5a6b5c;
-  margin: 0 0 6px;
-}
-
-.linger-shop-savings-listing {
-  font-size: 0.72rem;
-  line-height: 1.4;
-  color: #3d3d3a;
+.linger-shop-savings-save-stack {
   margin: 0 0 10px;
 }
 
-.linger-shop-savings-listing strong {
-  font-weight: 700;
-  color: #2c2c2a;
-}
-
-.linger-shop-savings-note {
-  font-size: 0.65rem;
-  line-height: 1.35;
-  color: #8a8883;
-  margin: -4px 0 10px;
-}
-
-.linger-shop-savings-muted {
-  font-size: 0.68rem;
-  line-height: 1.35;
-  color: #6b6b66;
+.linger-shop-savings-save-stack .linger-shop-impact-title {
   margin: 0 0 4px;
 }
 
-.linger-shop-savings-highlight {
-  font-size: 1.06rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #2c2c2a;
-  line-height: 1.2;
-  margin: 0 0 4px;
+.linger-shop-savings-save-stack .linger-shop-impact-number {
+  margin: 0 0 0;
 }
 
-.linger-shop-savings-savehero {
-  font-size: 1.24rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #2c2c2a;
-  line-height: 1.15;
+.linger-shop-savings-rows {
   margin: 0;
 }
 
-.linger-shop-savings-savehero strong {
-  font-weight: 800;
+.linger-shop-savings-row {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #3d3d3a;
+  margin: 0 0 4px;
+}
+
+.linger-shop-savings-row-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #3d3d3a;
+}
+
+.linger-shop-savings-row strong {
+  font-size: 0.72rem;
+  font-weight: 700;
   color: #2c2c2a;
 }
 
-.linger-shop-footnote {
-  font-size: 0.65rem;
-  line-height: 1.4;
-  color: #8a8880;
-  margin: 0 0 12px;
-  font-style: italic;
+.linger-shop-savings-row-suffix {
+  font-weight: 400;
+  color: #8a8883;
+  font-size: 0.72rem;
 }
 
 .linger-shop-divider {
