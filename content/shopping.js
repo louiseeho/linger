@@ -95,17 +95,6 @@
     });
   }
 
-  /**
-   * kg CO₂e ballpark for new item (manufacturing + shipping).
-   * co2 = display range; midKg = midpoint for metaphors (not exact science).
-   */
-  const ENV_ESTIMATE = {
-    tops: { co2: "7–15", midKg: 11 },
-    bottoms: { co2: "20–35", midKg: 28 },
-    shoes: { co2: "12–25", midKg: 19 },
-    accessories: { co2: "5–14", midKg: 10 },
-  };
-
   const METAPHOR_ROTATE_KEY = "linger_carbon_metaphor_idx";
 
   function nextMetaphorIndex(len) {
@@ -312,6 +301,719 @@
       if (keywordMatches(text, kw)) return region;
     }
     return null;
+  }
+
+  /**
+   * kg CO₂e planning band (manufacturing + distribution; use-phase excluded).
+   * Rule-based archetypes, material signals (with exclusions), optional price
+   * and brand-tier nudges. Heuristic only — not formal LCA.
+   */
+  function extractStructuredData() {
+    const result = {
+      brand: null,
+      category: null,
+      material: null,
+      price: null,
+      currency: null,
+    };
+    try {
+      const scripts = document.querySelectorAll(
+        'script[type="application/ld+json"]'
+      );
+      for (const script of scripts) {
+        let data;
+        try {
+          data = JSON.parse(script.textContent || "{}");
+        } catch (_) {
+          continue;
+        }
+        const roots = Array.isArray(data) ? data : [data];
+        const nodes = [];
+        for (const root of roots) {
+          if (root && typeof root === "object" && Array.isArray(root["@graph"])) {
+            for (const g of root["@graph"]) nodes.push(g);
+          } else if (root) {
+            nodes.push(root);
+          }
+        }
+        for (const node of nodes) {
+          if (!node || typeof node !== "object") continue;
+          const rawT = node["@type"];
+          const typeArr = Array.isArray(rawT) ? rawT : rawT != null ? [rawT] : [];
+          const isProduct = typeArr.some((t) => {
+            const s = String(t).trim();
+            const tail = s.replace(/^https?:\/\/schema\.org\//i, "");
+            const low = tail.toLowerCase();
+            return low === "product" || low === "individualproduct";
+          });
+          if (!isProduct) continue;
+
+          if (node.brand != null) {
+            if (typeof node.brand === "string") result.brand = node.brand;
+            else if (node.brand.name) result.brand = node.brand.name;
+          }
+          if (node.category != null) result.category = String(node.category);
+          if (node.material != null) result.material = String(node.material);
+
+          const offers = node.offers;
+          const off = Array.isArray(offers) ? offers[0] : offers;
+          if (off && off.price != null) {
+            const p = parseFloat(String(off.price).replace(/[^\d.\-]/g, ""));
+            if (Number.isFinite(p) && p > 0) {
+              result.price = p;
+              if (off.priceCurrency)
+                result.currency = String(off.priceCurrency).toUpperCase();
+            }
+          }
+        }
+      }
+    } catch (_) {
+      /* fail silently */
+    }
+    return result;
+  }
+
+  const CARBON_REGION_FALLBACK = {
+    tops: [3.5, 9],
+    bottoms: [4, 11],
+    shoes: [6, 15],
+    accessories: [2, 7],
+    unknown: [3, 10],
+  };
+
+  const CARBON_ARCHETYPES = {
+    tops: [
+      {
+        keywords: ["down jacket", "puffer jacket", "puffer coat", "quilted jacket", "padded jacket"],
+        band: [18, 38],
+        priceKey: "down jacket",
+      },
+      {
+        keywords: ["parka", "anorak", "ski jacket", "insulated jacket"],
+        band: [14, 30],
+        priceKey: "parka",
+      },
+      {
+        keywords: ["coat", "overcoat", "trench coat", "wool coat", "peacoat"],
+        band: [10, 22],
+        priceKey: "coat",
+      },
+      {
+        keywords: ["blazer", "suit jacket", "sport coat", "dinner jacket"],
+        band: [7, 15],
+        priceKey: "blazer",
+      },
+      {
+        keywords: ["hoodie", "hooded sweatshirt", "zip hoodie"],
+        band: [5, 10],
+        priceKey: "hoodie",
+      },
+      {
+        keywords: ["sweatshirt", "crewneck", "pullover fleece"],
+        band: [4, 9],
+        priceKey: "sweatshirt",
+      },
+      {
+        keywords: ["knit sweater", "jumper", "knitwear", "chunky knit", "cardigan"],
+        band: [4, 9],
+        priceKey: "knit sweater",
+      },
+      {
+        keywords: ["woven shirt", "oxford shirt", "flannel shirt", "linen shirt", "dress shirt"],
+        band: [3.5, 7],
+        priceKey: "woven shirt",
+      },
+      {
+        keywords: ["blouse", "chiffon top", "silk top", "satin blouse"],
+        band: [3, 6.5],
+        priceKey: "blouse",
+      },
+      {
+        keywords: ["polo shirt", "polo"],
+        band: [3, 6],
+        priceKey: "polo shirt",
+      },
+      {
+        keywords: ["long sleeve", "longsleeve", "thermal top", "base layer"],
+        band: [2.5, 5.5],
+        priceKey: "long sleeve",
+      },
+      {
+        keywords: ["t-shirt", "tshirt", "tee", "graphic tee", "vest top", "tank top", "crop top", "camisole"],
+        band: [2, 4.5],
+        priceKey: "t-shirt",
+      },
+    ],
+    bottoms: [
+      {
+        keywords: ["suit trousers", "tailored trousers", "dress trousers", "wool trousers"],
+        band: [6, 13],
+        priceKey: "suit trousers",
+      },
+      {
+        keywords: ["jeans", "denim jeans", "skinny jeans", "wide leg jeans", "mom jeans", "bootcut"],
+        band: [8, 18],
+        priceKey: "jeans",
+      },
+      {
+        keywords: ["chinos", "chino", "khaki trousers", "cotton trousers"],
+        band: [4, 9],
+        priceKey: "chinos",
+      },
+      {
+        keywords: ["joggers", "sweatpants", "track pants", "lounge pants"],
+        band: [3.5, 7.5],
+        priceKey: "joggers",
+      },
+      {
+        keywords: ["shorts", "denim shorts", "chino shorts", "swim shorts", "board shorts"],
+        band: [2.5, 6],
+        priceKey: "shorts",
+      },
+      {
+        keywords: ["leggings", "yoga pants", "cycling shorts", "compression tights"],
+        band: [2.5, 5.5],
+        priceKey: "leggings",
+      },
+      {
+        keywords: ["midi skirt", "maxi skirt", "pleated skirt", "wrap skirt"],
+        band: [3, 7],
+        priceKey: "skirt",
+      },
+      {
+        keywords: ["mini skirt", "skirt"],
+        band: [2, 5],
+        priceKey: "skirt",
+      },
+      {
+        keywords: ["trousers", "pants", "slacks", "wide leg", "flares"],
+        band: [4, 9],
+        priceKey: "default",
+      },
+    ],
+    shoes: [
+      {
+        keywords: ["hiking boot", "walking boot", "work boot", "chelsea boot", "ankle boot", "leather boot", "knee boot"],
+        band: [10, 22],
+        priceKey: "hiking boot",
+      },
+      {
+        keywords: ["leather shoe", "oxford", "derby", "brogue", "loafer", "leather sandal"],
+        band: [8, 18],
+        priceKey: "leather shoe",
+      },
+      {
+        keywords: ["running shoe", "running trainer", "performance trainer", "athletic shoe"],
+        band: [7, 16],
+        priceKey: "running shoe",
+      },
+      {
+        keywords: ["trainer", "sneaker", "casual shoe", "plimsoll", "canvas shoe"],
+        band: [5, 12],
+        priceKey: "trainer",
+      },
+      {
+        keywords: ["flip flop", "sandal", "slides", "mule", "slip on"],
+        band: [3, 8],
+        priceKey: "sandal",
+      },
+      {
+        keywords: ["slipper", "indoor shoe"],
+        band: [2, 5],
+        priceKey: "slipper",
+      },
+    ],
+    accessories: [
+      {
+        keywords: ["leather bag", "leather handbag", "tote bag", "shoulder bag", "crossbody", "backpack leather", "leather purse", "leather wallet"],
+        band: [8, 20],
+        priceKey: "leather bag",
+      },
+      {
+        keywords: ["canvas bag", "nylon bag", "fabric tote", "backpack", "rucksack"],
+        band: [3, 8],
+        priceKey: "canvas bag",
+      },
+      {
+        keywords: ["leather belt", "leather gloves"],
+        band: [3, 8],
+        priceKey: "leather belt",
+      },
+      {
+        keywords: ["wool scarf", "cashmere scarf", "knit scarf", "beanie", "wool hat", "knit hat"],
+        band: [1.5, 4],
+        priceKey: "wool scarf",
+      },
+      {
+        keywords: ["cap", "baseball cap", "hat", "bucket hat"],
+        band: [1, 3],
+        priceKey: "cap",
+      },
+      {
+        keywords: ["scarf", "gloves", "socks", "tights"],
+        band: [0.8, 2.5],
+        priceKey: "scarf",
+      },
+      {
+        keywords: ["sunglasses", "jewellery", "jewelry", "watch", "belt"],
+        band: [1, 3],
+        priceKey: "default",
+      },
+    ],
+  };
+
+  const MATERIAL_SIGNALS = [
+    {
+      phrases: ["faux leather", "pu leather", "vegan leather", "pleather", "leatherette"],
+      multiplier: 0.85,
+      excludes: ["genuine leather", "real leather", "full-grain", "top-grain", "suede"],
+    },
+    {
+      phrases: ["genuine leather", "real leather", "full-grain leather", "top-grain leather", "suede", "nubuck"],
+      multiplier: 1.62,
+      excludes: ["faux", "vegan", "pu leather"],
+    },
+    {
+      phrases: ["recycled polyester", "recycled nylon", "recycled poly", "repreve", "econyl", "recycled plastic"],
+      multiplier: 0.72,
+      excludes: [],
+    },
+    {
+      phrases: ["100% polyester", "virgin polyester", "virgin nylon", "acrylic", "elastane", "spandex"],
+      multiplier: 1.28,
+      excludes: ["recycled"],
+    },
+    {
+      phrases: ["organic cotton", "gots certified", "gots cotton", "fair trade cotton"],
+      multiplier: 0.78,
+      excludes: [],
+    },
+    {
+      phrases: ["100% cotton", "pure cotton", "combed cotton", "ring-spun cotton"],
+      multiplier: 1.05,
+      excludes: ["organic", "recycled"],
+    },
+    {
+      phrases: ["linen", "hemp", "ramie", "jute"],
+      multiplier: 0.65,
+      excludes: [],
+    },
+    {
+      phrases: ["merino wool", "lambswool", "cashmere", "alpaca", "wool blend"],
+      multiplier: 1.15,
+      excludes: ["recycled wool"],
+    },
+    {
+      phrases: ["recycled wool", "regenerated wool", "shetland reclaimed"],
+      multiplier: 0.68,
+      excludes: [],
+    },
+    {
+      phrases: ["tencel", "lyocell", "modal", "ecovero"],
+      multiplier: 0.82,
+      excludes: [],
+    },
+    {
+      phrases: ["viscose", "rayon", "bamboo viscose"],
+      multiplier: 1.18,
+      excludes: ["tencel", "lyocell", "ecovero", "modal"],
+    },
+    {
+      phrases: ["down fill", "goose down", "duck down", "800 fill", "600 fill", "down jacket", "puffer"],
+      multiplier: 1.45,
+      excludes: ["synthetic fill", "primaloft", "recycled down"],
+    },
+    {
+      phrases: ["recycled down", "primaloft", "synthetic fill", "polyfill", "thermolite"],
+      multiplier: 0.88,
+      excludes: [],
+    },
+  ];
+
+  function materialCarbonMultiplier(signalText) {
+    const lower = signalText.toLowerCase();
+    let bestMultiplier = 1.0;
+    let bestMatch = null;
+
+    for (const signal of MATERIAL_SIGNALS) {
+      const hasPhrase = signal.phrases.some((p) => lower.includes(p));
+      if (!hasPhrase) continue;
+
+      const isVetoed = signal.excludes.some((ex) => lower.includes(ex));
+      if (isVetoed) continue;
+
+      if (
+        bestMatch === null ||
+        Math.abs(signal.multiplier - 1.0) > Math.abs(bestMultiplier - 1.0)
+      ) {
+        bestMultiplier = signal.multiplier;
+        bestMatch = signal;
+      }
+    }
+
+    return {
+      multiplier: Math.max(0.55, Math.min(1.85, bestMultiplier)),
+      matched: bestMatch !== null,
+    };
+  }
+
+  const ARCHETYPE_MEDIAN_PRICE_GBP = {
+    "down jacket": 180,
+    parka: 150,
+    coat: 130,
+    blazer: 90,
+    hoodie: 45,
+    sweatshirt: 38,
+    "knit sweater": 55,
+    "woven shirt": 45,
+    blouse: 38,
+    "polo shirt": 35,
+    "long sleeve": 28,
+    "t-shirt": 22,
+    jeans: 60,
+    "suit trousers": 80,
+    chinos: 50,
+    joggers: 38,
+    shorts: 30,
+    leggings: 28,
+    skirt: 35,
+    "hiking boot": 110,
+    "leather shoe": 100,
+    "running shoe": 95,
+    trainer: 75,
+    sandal: 40,
+    slipper: 25,
+    "leather bag": 120,
+    "canvas bag": 40,
+    "leather belt": 35,
+    "wool scarf": 30,
+    cap: 22,
+    scarf: 18,
+    default: 45,
+  };
+
+  function priceWeightMultiplier(priceGBP, archetypeKey) {
+    if (!priceGBP || priceGBP <= 0) return 1.0;
+
+    const median =
+      ARCHETYPE_MEDIAN_PRICE_GBP[archetypeKey] ??
+      ARCHETYPE_MEDIAN_PRICE_GBP["default"];
+    const ratio = priceGBP / median;
+
+    const raw = 0.72 + (Math.log(ratio + 0.1) / Math.log(12)) * 0.56;
+    return Math.max(0.72, Math.min(1.3, raw));
+  }
+
+  /**
+   * Heuristic brand tiers — not certification. Informed by public sustainability
+   * ratings and transparency indices; treat as a soft nudge only.
+   */
+  const BRAND_TIERS = {
+    shein: 1,
+    sheglam: 1,
+    romwe: 1,
+    temu: 1,
+    cider: 1,
+    "princess polly": 1,
+    zaful: 1,
+    rosegal: 1,
+    dresslily: 1,
+    newchic: 1,
+    joom: 1,
+    urbanic: 1,
+    boohoo: 2,
+    prettylittlething: 2,
+    plt: 2,
+    missguided: 2,
+    "nasty gal": 2,
+    "fashion nova": 2,
+    "forever 21": 2,
+    "h&m": 2,
+    hm: 2,
+    zara: 2,
+    bershka: 2,
+    "pull&bear": 2,
+    stradivarius: 2,
+    oysho: 2,
+    asos: 2,
+    topshop: 2,
+    primark: 2,
+    penneys: 2,
+    george: 2,
+    select: 2,
+    "new look": 2,
+    "dorothy perkins": 2,
+    "river island": 2,
+    quiz: 2,
+    "joe browns": 2,
+    "in the style": 2,
+    "i saw it first": 2,
+    "oh polly": 2,
+    misspap: 2,
+    "urban outfitters": 2,
+    "free people": 2,
+    anthropologie: 2,
+    gap: 2,
+    "old navy": 2,
+    "banana republic": 2,
+    express: 2,
+    "forever new": 2,
+    mango: 2,
+    uniqlo: 2,
+    terranova: 2,
+    calzedonia: 2,
+    intimissimi: 2,
+    tezenis: 2,
+    "c&a": 2,
+    takko: 2,
+    kik: 2,
+    pepco: 2,
+    "george at asda": 2,
+    matalan: 2,
+    peacocks: 2,
+    bonmarche: 2,
+    "shein curve": 1,
+    "levi's": 4,
+    levis: 4,
+    columbia: 4,
+    "the north face": 4,
+    timberland: 4,
+    puma: 4,
+    adidas: 4,
+    nike: 4,
+    "marks & spencer": 4,
+    "marks and spencer": 4,
+    "m&s": 4,
+    next: 4,
+    "fat face": 4,
+    "white stuff": 4,
+    seasalt: 4,
+    "helly hansen": 4,
+    "arc'teryx": 4,
+    arcteryx: 4,
+    "fjällräven": 4,
+    fjallraven: 4,
+    icebreaker: 4,
+    smartwool: 4,
+    veja: 4,
+    allbirds: 4,
+    rothys: 4,
+    "rothy's": 4,
+    "girlfriend collective": 4,
+    "thought clothing": 4,
+    preworn: 4,
+    kotn: 4,
+    pact: 4,
+    outerknown: 4,
+    finisterre: 4,
+    howies: 4,
+    rapanui: 4,
+    boden: 4,
+    patagonia: 5,
+    "eileen fisher": 5,
+    "stella mccartney": 5,
+    reformation: 5,
+    tentree: 5,
+    "ten tree": 5,
+    "people tree": 5,
+    pangaia: 5,
+    "organic basics": 5,
+    thought: 5,
+    "hemp republic": 5,
+    "sancho's": 5,
+    "toad&co": 5,
+    "toad co": 5,
+    prAna: 5,
+    prana: 5,
+    "picture organic": 5,
+    ecoalf: 5,
+    armedangels: 5,
+    "knows supply": 5,
+    "known supply": 5,
+    "christy dawn": 5,
+    "mara hoffman": 5,
+    "tonlé": 5,
+    tonle: 5,
+    "honest by": 5,
+    "vege threads": 5,
+    nau: 5,
+  };
+
+  const BRAND_TIER_MULTIPLIER = {
+    1: 1.15,
+    2: 1.08,
+    3: 1.0,
+    4: 0.92,
+    5: 0.85,
+  };
+
+  function brandTierMultiplier(brandName, hostname) {
+    const candidates = [];
+    if (brandName) candidates.push(String(brandName).toLowerCase().trim());
+    if (hostname) {
+      const stripped = String(hostname)
+        .replace(/^www\./i, "")
+        .split(".")[0]
+        .replace(/-/g, " ");
+      candidates.push(stripped.toLowerCase());
+    }
+
+    const brandEntries = Object.entries(BRAND_TIERS).sort(
+      (a, b) => b[0].length - a[0].length
+    );
+
+    for (const candidate of candidates) {
+      for (const [brand, tier] of brandEntries) {
+        if (candidate.includes(brand) || brand.includes(candidate)) {
+          return { multiplier: BRAND_TIER_MULTIPLIER[tier], tier };
+        }
+      }
+    }
+    return { multiplier: 1.0, tier: 3 };
+  }
+
+  function toPriceGBP(price, currency) {
+    if (price == null || !Number.isFinite(price) || price <= 0) return null;
+    const c = (currency || "GBP").toUpperCase();
+    if (c === "GBP") return price;
+    if (c === "USD") return price * 0.79;
+    if (c === "EUR") return price * 0.86;
+    return null;
+  }
+
+  function buildCarbonSignalText(structured) {
+    const prefix = [];
+    if (structured && structured.material)
+      prefix.push(String(structured.material).toLowerCase());
+    if (structured && structured.category)
+      prefix.push(String(structured.category).toLowerCase());
+    if (structured && structured.brand) prefix.push(String(structured.brand).toLowerCase());
+    try {
+      const rest = [
+        collectPageText(),
+        (getProductTitle() || "").toLowerCase(),
+        (getProductDescriptionText() || "").toLowerCase(),
+      ].join("\n");
+      const head = prefix.filter(Boolean).join("\n");
+      return head ? head + "\n" + rest : rest;
+    } catch (_) {
+      const head = prefix.filter(Boolean).join("\n");
+      return head ? head + "\n" + collectPageText() : collectPageText();
+    }
+  }
+
+  function pickCarbonArchetypeBand(textLower, region) {
+    const fbKey = CARBON_REGION_FALLBACK[region] ? region : "unknown";
+    const fb = CARBON_REGION_FALLBACK[fbKey] || CARBON_REGION_FALLBACK.unknown;
+    const list = CARBON_ARCHETYPES[region];
+    if (!list || !list.length) {
+      return {
+        band: fb.slice(),
+        archetypeKey: "default",
+        archetypeMatched: false,
+      };
+    }
+    for (const row of list) {
+      for (const kw of row.keywords) {
+        if (keywordMatches(textLower, kw)) {
+          return {
+            band: row.band.slice(),
+            archetypeKey: row.priceKey || "default",
+            archetypeMatched: true,
+          };
+        }
+      }
+    }
+    return {
+      band: fb.slice(),
+      archetypeKey: "default",
+      archetypeMatched: false,
+    };
+  }
+
+  function confidenceLabel(c) {
+    let score = 0;
+    if (c.archetypeMatched) score += 2;
+    if (c.materialMatched) score += 1;
+    if (c.priceFound) score += 1;
+    if (c.brandTier !== 3) score += 1;
+    if (score >= 4) return "high";
+    if (score >= 2) return "medium";
+    return "low";
+  }
+
+  function estimateGarmentCarbonKg(productRegion) {
+    const region = ["tops", "bottoms", "shoes", "accessories"].includes(
+      productRegion
+    )
+      ? productRegion
+      : "tops";
+
+    const structured = extractStructuredData();
+    const signalText = buildCarbonSignalText(structured);
+
+    let price = structured.price;
+    let currency = structured.currency;
+    if (price == null || !Number.isFinite(price) || price <= 0) {
+      const scrap = extractRetailPriceAndCurrency();
+      price = scrap.price;
+      currency = scrap.currency;
+    }
+    const priceGBP = toPriceGBP(price, currency);
+
+    const { band, archetypeKey, archetypeMatched } = pickCarbonArchetypeBand(
+      signalText,
+      region
+    );
+    const [min0, max0] = band;
+
+    const mat = materialCarbonMultiplier(signalText);
+    const matMult = mat.multiplier;
+    const priceMult = priceWeightMultiplier(priceGBP, archetypeKey);
+    const brandRes = brandTierMultiplier(structured.brand, location.hostname);
+    const brandMult = brandRes.multiplier;
+    const brandTier = brandRes.tier;
+
+    let scaledMin = min0 * matMult * priceMult * brandMult;
+    let scaledMax = max0 * matMult * priceMult * brandMult;
+    if (scaledMin > scaledMax) {
+      const t = scaledMin;
+      scaledMin = scaledMax;
+      scaledMax = t;
+    }
+    scaledMin = Math.max(0.3, scaledMin);
+    scaledMax = Math.max(scaledMin + 0.5, scaledMax);
+
+    const midKg = (scaledMin + scaledMax) / 2;
+    const ra = Math.round(scaledMin);
+    const rb = Math.round(scaledMax);
+    const rangeLabel = ra === rb ? String(ra) : ra + "\u2013" + rb;
+
+    const confidence = {
+      archetypeMatched,
+      materialMatched: mat.matched,
+      priceFound: priceGBP != null && priceGBP > 0,
+      brandTier,
+    };
+    const confLabel = confidenceLabel(confidence);
+
+    let detailLine = archetypeMatched
+      ? "Style phrases on this page narrowed the band."
+      : "Few style clues; using a broad category band.";
+    if (mat.matched) detailLine += " Material phrases adjusted it.";
+    if (confidence.priceFound) detailLine += " Price vs typical nudged the range.";
+    if (brandTier !== 3) detailLine += " Brand tier nudge applied.";
+    detailLine += " Planning estimate, not formal LCA.";
+
+    return {
+      minKg: scaledMin,
+      maxKg: scaledMax,
+      midKg,
+      rangeLabel,
+      detailLine,
+      confidence,
+      confidenceLabel: confLabel,
+    };
   }
 
   function hasLikelyProductPage() {
@@ -743,9 +1445,8 @@
   }
 
   function appendEnvironmentalImpact(container, productRegion) {
-    const e = ENV_ESTIMATE[productRegion] || ENV_ESTIMATE.tops;
-    const midKg = e.midKg != null ? e.midKg : 11;
-    const midRounded = Math.round(midKg);
+    const est = estimateGarmentCarbonKg(productRegion);
+    const midRounded = Math.round(est.midKg);
 
     const title = document.createElement("div");
     title.className = "linger-shop-impact-title";
@@ -763,15 +1464,25 @@
     range.className = "linger-shop-impact-range";
     range.textContent =
       "Typical range for one new item like this: " +
-      e.co2 +
+      est.rangeLabel +
       " kg (making + shipping). Buying secondhand avoids most of that.";
 
+    const meta = document.createElement("div");
+    meta.className = "linger-shop-impact-meta";
+    meta.appendChild(document.createTextNode(est.detailLine + " \u00b7 estimate confidence: "));
+    const confSpan = document.createElement("span");
+    confSpan.className =
+      "linger-shop-impact-confidence-" + (est.confidenceLabel || "low");
+    confSpan.textContent = est.confidenceLabel || "low";
+    meta.appendChild(confSpan);
+
     const idx = nextMetaphorIndex(CARBON_METAPHORS.length);
-    const metaphorEl = CARBON_METAPHORS[idx](midKg);
+    const metaphorEl = CARBON_METAPHORS[idx](est.midKg);
 
     container.appendChild(title);
     container.appendChild(numWrap);
     container.appendChild(range);
+    container.appendChild(meta);
     container.appendChild(metaphorEl);
   }
 

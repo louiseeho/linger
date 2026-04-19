@@ -292,6 +292,28 @@
   margin: 0 0 10px;
 }
 
+.linger-shop-impact-meta {
+  font-size: 0.65rem;
+  line-height: 1.35;
+  color: #8a8883;
+  margin: 0 0 10px;
+}
+
+.linger-shop-impact-confidence-high {
+  color: var(--linger-green, #4caf7d);
+  font-weight: 600;
+}
+
+.linger-shop-impact-confidence-medium {
+  color: var(--linger-amber, #e09b3d);
+  font-weight: 600;
+}
+
+.linger-shop-impact-confidence-low {
+  color: var(--linger-muted, #9e9e9e);
+  font-weight: 600;
+}
+
 .linger-shop-impact-metaphor {
   font-size: 0.74rem;
   line-height: 1.45;
