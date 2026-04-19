@@ -1308,6 +1308,86 @@
     return { text: lines.join("\n"), lineCount: Math.max(0, n - 1) };
   }
 
+  const ECHO_LITE_STOP = new Set([
+    "the",
+    "and",
+    "for",
+    "with",
+    "from",
+    "this",
+    "that",
+    "your",
+    "you",
+    "our",
+    "are",
+    "was",
+    "were",
+    "has",
+    "have",
+    "its",
+    "will",
+    "can",
+    "not",
+    "but",
+    "into",
+    "about",
+    "their",
+    "they",
+    "them",
+    "any",
+    "all",
+    "out",
+    "off",
+    "item",
+    "size",
+    "color",
+    "colour",
+  ]);
+
+  function echoLiteWordDisplay(w) {
+    const t = String(w || "").trim();
+    if (!t) return t;
+    const lower = t.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }
+
+  function echoLiteTokens(text) {
+    return String(text || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length >= 3 && !ECHO_LITE_STOP.has(w));
+  }
+
+  function echoLiteEscapeRe(s) {
+    return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function buildEchoLitePhrases(productTitle, productDescription, numberedSnippets) {
+    const snippet = String(numberedSnippets || "");
+    if (!snippet.trim()) return [];
+    const out = [];
+    const seen = Object.create(null);
+    const productText = [productTitle, productDescription].join(" ");
+    for (const w of echoLiteTokens(productText)) {
+      if (seen[w]) continue;
+      if (w.length > 24) continue;
+      let hit = false;
+      try {
+        hit = new RegExp("\\b" + echoLiteEscapeRe(w) + "\\b", "i").test(
+          snippet
+        );
+      } catch (_) {
+        hit = false;
+      }
+      if (!hit) continue;
+      seen[w] = true;
+      out.push(echoLiteWordDisplay(w));
+      if (out.length >= 6) break;
+    }
+    return out;
+  }
+
   function sendShopEchoMessage(payload) {
     return new Promise((resolve) => {
       try {
@@ -1363,19 +1443,59 @@
     });
 
     if (!slot.parentNode) return;
-    fillEchoSlot(slot, res, thumbDataUrl, logs.length);
+    fillEchoSlot(slot, res, thumbDataUrl, logs.length, {
+      productTitle: title,
+      productDescription: desc,
+      numberedSnippets,
+    });
   }
 
-  function fillEchoSlot(slot, res, thumbDataUrl, logLen) {
+  function fillEchoSlot(slot, res, thumbDataUrl, logLen, ctx) {
     slot.innerHTML = "";
     slot.classList.remove("linger-shop-echo--loading");
     if (!res.ok) {
+      if (logLen === 0) {
+        const err = document.createElement("p");
+        err.className = "linger-shop-echo-fallback";
+        err.textContent =
+          "Save pins with Linger on Pinterest to see how this piece echoes your taste.";
+        slot.appendChild(err);
+        return;
+      }
+      const phrases =
+        ctx && ctx.numberedSnippets
+          ? buildEchoLitePhrases(
+              ctx.productTitle,
+              ctx.productDescription,
+              ctx.numberedSnippets
+            )
+          : [];
+      if (phrases.length > 0) {
+        const intro = document.createElement("p");
+        intro.className = "linger-shop-echo-fallback";
+        intro.textContent =
+          "AI match is off. These words from this product also appear in your Linger saves:";
+        slot.appendChild(intro);
+        const ul = document.createElement("ul");
+        ul.className = "linger-shop-echo-list";
+        phrases.forEach((phrase) => {
+          const li = document.createElement("li");
+          li.textContent = phrase;
+          ul.appendChild(li);
+        });
+        slot.appendChild(ul);
+        const tail = document.createElement("p");
+        tail.className = "linger-shop-echo-fallback";
+        tail.style.marginTop = "10px";
+        tail.textContent =
+          "When AI is back, you\u2019ll get a fuller read here. Your saves are unchanged.";
+        slot.appendChild(tail);
+        return;
+      }
       const err = document.createElement("p");
       err.className = "linger-shop-echo-fallback";
       err.textContent =
-        logLen === 0
-          ? "Save pins with Linger on Pinterest to see how this piece echoes your taste."
-          : "We couldn't run the AI match right now. Your saves are still in Linger when you're back.";
+        "We couldn't run the AI match right now. Your saves are still in Linger when you're back.";
       slot.appendChild(err);
       return;
     }

@@ -518,6 +518,129 @@
   line-height: 1.45;
 }
 
+.linger-no-ai-lede {
+  font-size: 0.85rem;
+  color: #2c2c2a;
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.linger-no-ai-sub {
+  font-size: 0.75rem;
+  color: #6b6b66;
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.linger-no-ai-retry {
+  display: inline-block;
+  margin: 0 0 14px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #5a6b5c;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-align: left;
+}
+
+.linger-no-ai-retry:hover {
+  color: #2c2c2a;
+}
+
+.linger-manual-piece-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #2c2c2a;
+  margin: 12px 0 8px;
+}
+
+.linger-manual-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.linger-manual-piece-input {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+  padding: 10px 12px;
+  border: 1px solid #d8d4cc;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #2c2c2a;
+  background: #fff;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.linger-manual-piece-input:focus {
+  outline: none;
+  border-color: #8a9e8c;
+  box-shadow: 0 0 0 3px rgba(138, 158, 140, 0.2);
+}
+
+.linger-manual-add-btn {
+  appearance: none;
+  flex-shrink: 0;
+  padding: 0 14px;
+  border: 1px solid #2c2c2a;
+  border-radius: 10px;
+  background: #fff;
+  color: #2c2c2a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  align-self: stretch;
+}
+
+.linger-manual-add-btn:hover {
+  background: rgba(44, 44, 42, 0.04);
+}
+
+.linger-manual-add-err {
+  font-size: 0.72rem;
+  color: #b03e3c;
+  margin-top: 6px;
+  min-height: 1.2em;
+}
+
+.linger-manual-add-err.linger-hidden {
+  display: none !important;
+}
+
+.linger-manual-continue {
+  appearance: none;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #2c2c2a;
+  color: #faf8f5;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.linger-manual-continue:hover {
+  opacity: 0.92;
+}
+
+.linger-attr-no-ai-hint {
+  font-size: 0.72rem;
+  color: #6b6b66;
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+
 .linger-btn-log.linger-btn-log--secondary {
   width: 100%;
   background: #fff;

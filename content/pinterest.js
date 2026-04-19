@@ -289,6 +289,32 @@
     return /usage limit was reached|free tier cap/i.test(String(msg || ""));
   }
 
+  const NO_AI_ITEM_PRESETS = [
+    "Jacket",
+    "Top",
+    "Bottom",
+    "Dress",
+    "Shoes",
+    "Bag",
+    "Jewelry",
+    "Accessories",
+  ];
+
+  const NO_AI_FALLBACK_ATTRIBUTES = [
+    "Colour",
+    "Pattern",
+    "Fabric",
+    "Texture",
+    "Fit",
+    "Silhouette",
+    "Proportions",
+    "Styling",
+    "Details",
+    "Comfort",
+    "Versatility",
+    "Vibe",
+  ];
+
   function storageLocalGet(keys) {
     return new Promise((resolve, reject) => {
       try {
@@ -690,6 +716,8 @@
 
     const CUSTOM_FOCUS_MAX = 200;
 
+    let pendingAttrNoAiHint = false;
+
     const state = {
       imageBase64: null,
       mimeType: "image/jpeg",
@@ -887,6 +915,151 @@
       endCardHeightTransition(true);
     }
 
+    function showManualItemPicker() {
+      beginCardHeightLock();
+      clearPanel();
+      const working = [];
+
+      const notice = document.createElement("p");
+      notice.className = "linger-no-ai-lede";
+      notice.textContent = "Couldn\u2019t scan this pin with AI right now.";
+      panel.appendChild(notice);
+
+      const sub = document.createElement("p");
+      sub.className = "linger-no-ai-sub";
+      sub.textContent =
+        "Tap quick labels or add your own (up to six). You can still describe the whole look afterward.";
+      panel.appendChild(sub);
+
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "linger-no-ai-retry";
+      retry.textContent = "Retry AI scan";
+      retry.addEventListener("click", () => {
+        void runListItems();
+      });
+      panel.appendChild(retry);
+
+      const presetLab = document.createElement("div");
+      presetLab.className = "linger-step-label";
+      presetLab.textContent = "Quick picks";
+      panel.appendChild(presetLab);
+
+      const presetGrid = document.createElement("div");
+      presetGrid.className = "linger-item-grid";
+
+      const manualLab = document.createElement("div");
+      manualLab.className = "linger-manual-piece-label";
+      manualLab.textContent = "Add a piece in your words";
+
+      const addRow = document.createElement("div");
+      addRow.className = "linger-manual-add-row";
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.className = "linger-manual-piece-input";
+      inp.maxLength = 48;
+      inp.setAttribute("enterkeyhint", "done");
+      inp.placeholder = "e.g. denim tote, gold hoops";
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "linger-manual-add-btn";
+      addBtn.textContent = "Add";
+      addRow.appendChild(inp);
+      addRow.appendChild(addBtn);
+
+      const addErr = document.createElement("div");
+      addErr.className = "linger-manual-add-err linger-hidden";
+      addErr.setAttribute("aria-live", "polite");
+
+      function syncPresetStyles() {
+        for (const btn of presetGrid.querySelectorAll("button")) {
+          const lab = btn.dataset.presetLabel || btn.textContent;
+          const on = working.some(
+            (x) => x.toLowerCase() === String(lab).toLowerCase()
+          );
+          btn.classList.toggle("linger-item-card--done", on);
+        }
+      }
+
+      function pushTypedLabel() {
+        addErr.classList.add("linger-hidden");
+        const sc = toSentenceCase((inp.value || "").trim().slice(0, 48));
+        if (!sc) {
+          addErr.textContent = "Enter a short label.";
+          addErr.classList.remove("linger-hidden");
+          return;
+        }
+        if (working.length >= 6) {
+          addErr.textContent =
+            "Six pieces is the max — remove one to add another.";
+          addErr.classList.remove("linger-hidden");
+          return;
+        }
+        if (working.some((x) => x.toLowerCase() === sc.toLowerCase())) {
+          addErr.textContent = "You already have that piece.";
+          addErr.classList.remove("linger-hidden");
+          return;
+        }
+        working.push(sc);
+        syncPresetStyles();
+        inp.value = "";
+      }
+
+      for (const preset of NO_AI_ITEM_PRESETS) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "linger-item-card";
+        btn.dataset.presetLabel = preset;
+        btn.textContent = preset;
+        btn.addEventListener("click", () => {
+          addErr.classList.add("linger-hidden");
+          const t = toSentenceCase(preset);
+          const idx = working.findIndex(
+            (x) => x.toLowerCase() === t.toLowerCase()
+          );
+          if (idx >= 0) {
+            working.splice(idx, 1);
+          } else if (working.length >= 6) {
+            addErr.textContent = "Six pieces max.";
+            addErr.classList.remove("linger-hidden");
+            return;
+          } else {
+            working.push(t);
+          }
+          syncPresetStyles();
+        });
+        presetGrid.appendChild(btn);
+      }
+      panel.appendChild(presetGrid);
+
+      panel.appendChild(manualLab);
+      panel.appendChild(addRow);
+      panel.appendChild(addErr);
+
+      addBtn.addEventListener("click", () => {
+        pushTypedLabel();
+      });
+
+      inp.addEventListener("keydown", (ev) => {
+        if (ev.key !== "Enter") return;
+        ev.preventDefault();
+        pushTypedLabel();
+      });
+
+      const cont = document.createElement("button");
+      cont.type = "button";
+      cont.className = "linger-manual-continue";
+      cont.textContent = "Continue";
+      cont.addEventListener("click", () => {
+        state.labels = working.slice();
+        state.itemListReady = true;
+        renderItemGrid();
+      });
+      panel.appendChild(cont);
+
+      endCardHeightTransition(true);
+    }
+
     function stagedHas(label) {
       return state.staged.some((x) => x.label === label);
     }
@@ -1002,6 +1175,15 @@
       back.className = "linger-ai-back";
       back.textContent = "\u2190 Back to items";
       back.addEventListener("click", () => renderItemGrid());
+
+      if (pendingAttrNoAiHint) {
+        pendingAttrNoAiHint = false;
+        const noAi = document.createElement("p");
+        noAi.className = "linger-attr-no-ai-hint";
+        noAi.textContent =
+          "AI detail suggestions are off — tap any that fit, or skip them and use your words below.";
+        panel.appendChild(noAi);
+      }
 
       const title = document.createElement("div");
       title.className =
@@ -1125,10 +1307,14 @@
       });
 
       if (!r.ok) {
-        showError(
-          r.error || "Couldn\u2019t describe this item.",
-          !isContextInvalidatedMessage(r.error) && state.itemListReady
-        );
+        if (isContextInvalidatedMessage(r.error)) {
+          showError(r.error || "Couldn\u2019t describe this item.", false);
+          return;
+        }
+        state.attrCache[cKey] = NO_AI_FALLBACK_ATTRIBUTES.slice();
+        state.attrChoices = filterAttrPills(state.attrCache[cKey]);
+        pendingAttrNoAiHint = true;
+        renderAttributeView();
         return;
       }
       const raw = Array.isArray(r.attributes) ? r.attributes : [];
@@ -1152,10 +1338,11 @@
         mimeType: state.mimeType,
       });
       if (!r.ok) {
-        showError(
-          r.error || "AI request failed.",
-          !isContextInvalidatedMessage(r.error) && state.itemListReady
-        );
+        if (isContextInvalidatedMessage(r.error)) {
+          showError(r.error || "AI request failed.", false);
+          return;
+        }
+        showManualItemPicker();
         return;
       }
       const rawLabels = Array.isArray(r.items) ? r.items : [];
