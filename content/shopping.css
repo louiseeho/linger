@@ -285,18 +285,50 @@
   color: #2c2c2a;
 }
 
+.linger-shop-impact-details {
+  margin: 2px 0 8px;
+}
+
+.linger-shop-impact-details-summary {
+  display: list-item;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #6b6b66;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  list-style-position: outside;
+  margin-left: 1em;
+}
+
+.linger-shop-impact-details-summary:hover {
+  color: #4a6b52;
+}
+
+.linger-shop-impact-details-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e8e4de;
+}
+
+.linger-shop-impact-details-note {
+  font-size: 0.65rem;
+  line-height: 1.4;
+  color: #8a8883;
+  margin: 0 0 8px;
+}
+
 .linger-shop-impact-range {
   font-size: 0.7rem;
   line-height: 1.4;
   color: #6b6b66;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
 }
 
 .linger-shop-impact-meta {
   font-size: 0.65rem;
   line-height: 1.35;
   color: #8a8883;
-  margin: 0 0 10px;
+  margin: 0;
 }
 
 .linger-shop-impact-confidence-high {

@@ -1450,7 +1450,7 @@
 
     const title = document.createElement("div");
     title.className = "linger-shop-impact-title";
-    title.textContent = "Carbon footprint (ballpark)";
+    title.textContent = "Carbon footprint";
 
     const numWrap = document.createElement("div");
     numWrap.className = "linger-shop-impact-number";
@@ -1476,13 +1476,29 @@
     confSpan.textContent = est.confidenceLabel || "low";
     meta.appendChild(confSpan);
 
+    const details = document.createElement("details");
+    details.className = "linger-shop-impact-details";
+    const summary = document.createElement("summary");
+    summary.className = "linger-shop-impact-details-summary";
+    summary.textContent = "How we estimated this";
+    const detailsBody = document.createElement("div");
+    detailsBody.className = "linger-shop-impact-details-body";
+    const ballparkNote = document.createElement("p");
+    ballparkNote.className = "linger-shop-impact-details-note";
+    ballparkNote.textContent =
+      "Ballpark only (manufacturing + shipping, not use-phase or formal carbon accounting).";
+    detailsBody.appendChild(ballparkNote);
+    detailsBody.appendChild(range);
+    detailsBody.appendChild(meta);
+    details.appendChild(summary);
+    details.appendChild(detailsBody);
+
     const idx = nextMetaphorIndex(CARBON_METAPHORS.length);
     const metaphorEl = CARBON_METAPHORS[idx](est.midKg);
 
     container.appendChild(title);
     container.appendChild(numWrap);
-    container.appendChild(range);
-    container.appendChild(meta);
+    container.appendChild(details);
     container.appendChild(metaphorEl);
   }
 
